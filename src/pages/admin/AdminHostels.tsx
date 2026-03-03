@@ -1,0 +1,148 @@
+import { useEffect, useState } from 'react';
+import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { supabase } from '../../lib/supabase';
+import { Hostel, Profile } from '../../types/database';
+import { Building2, MapPin, DollarSign } from 'lucide-react';
+
+type HostelWithOwner = Hostel & { owner: Profile };
+
+export function AdminHostels() {
+  const [hostels, setHostels] = useState<HostelWithOwner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
+
+  useEffect(() => {
+    loadHostels();
+  }, []);
+
+  const loadHostels = async () => {
+    try {
+      const { data } = await supabase
+        .from('hostels')
+        .select(`
+          *,
+          owner:profiles(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setHostels(data as HostelWithOwner[]);
+      }
+    } catch (error) {
+      console.error('Error loading hostels:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFilteredHostels = () => {
+    switch (filter) {
+      case 'published':
+        return hostels.filter(h => h.is_published);
+      case 'draft':
+        return hostels.filter(h => !h.is_published);
+      default:
+        return hostels;
+    }
+  };
+
+  const filteredHostels = getFilteredHostels();
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Manage Hostels</h1>
+          <p className="text-gray-600 mt-1">Oversee all hostel listings on the platform</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {['all', 'published', 'draft'].map((filterOption) => (
+            <button
+              key={filterOption}
+              onClick={() => setFilter(filterOption as typeof filter)}
+              className={`px-4 py-2 rounded-lg font-medium capitalize transition-colors ${
+                filter === filterOption
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {filterOption}
+            </button>
+          ))}
+        </div>
+
+        <div className="text-sm text-gray-600">
+          Found {filteredHostels.length} hostel{filteredHostels.length !== 1 ? 's' : ''}
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : filteredHostels.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+            <Building2 size={48} className="mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600">No hostels found</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredHostels.map((hostel) => (
+              <div key={hostel.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white">
+                  <Building2 size={64} />
+                </div>
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-lg font-bold text-gray-900">{hostel.name}</h3>
+                    {hostel.is_published ? (
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                        Published
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded-full">
+                        Draft
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mb-3">
+                    <p className="text-sm text-gray-600">Owner: {hostel.owner.full_name}</p>
+                    <p className="text-xs text-gray-500">{hostel.owner.email}</p>
+                  </div>
+
+                  <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
+                    <MapPin size={16} className="mt-0.5 flex-shrink-0" />
+                    <span className="line-clamp-2">{hostel.address}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-gray-50 p-2 rounded">
+                      <p className="text-xs text-gray-600">Total Rooms</p>
+                      <p className="font-semibold text-gray-900">{hostel.total_rooms}</p>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded">
+                      <p className="text-xs text-gray-600">Available</p>
+                      <p className="font-semibold text-gray-900">{hostel.available_rooms}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-green-600 font-bold">
+                    <DollarSign size={18} />
+                    <span>KSh {Number(hostel.price_per_month).toLocaleString()}/mo</span>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <p className="text-xs text-gray-500">
+                      Created: {new Date(hostel.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}
