@@ -15,7 +15,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="text-2xl font-bold text-gray-900">
-              Hostel Hub
+              Smart hostel finder
             </Link>
             {!isLanding && (
               <div className="flex space-x-4">

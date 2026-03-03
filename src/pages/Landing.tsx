@@ -7,7 +7,7 @@ export function Landing() {
       <nav className="bg-white shadow-sm fixed w-full top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="text-2xl font-bold text-blue-600">Hostel Hub</div>
+            <div className="text-2xl font-bold text-blue-600">Smart hostel finder</div>
             <div className="flex space-x-4">
               <Link
                 to="/login"
@@ -55,7 +55,7 @@ export function Landing() {
       <section className="py-20 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl font-bold text-center mb-16 text-gray-900">
-            Why Choose Hostel Hub?
+            Why Choose Smart hostel finder?
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center p-6">
@@ -115,9 +115,9 @@ export function Landing() {
 
       <footer className="bg-gray-900 text-white py-12 px-4">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="text-2xl font-bold mb-4">Hostel Hub</div>
+          <div className="text-2xl font-bold mb-4">Smart hostel finder</div>
           <p className="text-gray-400 mb-4">Your trusted student accommodation platform</p>
-          <p className="text-gray-500 text-sm">© 2024 Hostel Hub. All rights reserved.</p>
+          <p className="text-gray-500 text-sm">© 2024 Smart hostel finder. All rights reserved.</p>
         </div>
       </footer>
     </div>

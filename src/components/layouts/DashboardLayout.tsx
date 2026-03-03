@@ -60,7 +60,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-md z-50 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Hostel Hub</h1>
+        <h1 className="text-xl font-bold text-gray-900">Smart hostel finder</h1>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 rounded-lg hover:bg-gray-100"
@@ -72,7 +72,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="h-full flex flex-col">
           <div className="p-6 border-b">
-            <h1 className="text-2xl font-bold text-gray-900">Hostel Hub</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Smart hostel finder</h1>
             <p className="text-sm text-gray-600 mt-1 capitalize">{profile?.role}</p>
           </div>
 
