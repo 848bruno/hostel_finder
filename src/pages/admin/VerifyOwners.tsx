@@ -3,6 +3,15 @@ import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
 import { CheckCircle, XCircle, Clock, Eye, FileText, ExternalLink } from 'lucide-react';
 
+// Cloudinary PDFs uploaded with resource_type 'auto' land under /image/upload/
+// which requires auth. Normalise to /raw/upload/ for direct browser access.
+function licenseUrl(url: string): string {
+  if (url.endsWith('.pdf') && url.includes('/image/upload/')) {
+    return url.replace('/image/upload/', '/raw/upload/');
+  }
+  return url;
+}
+
 interface Owner {
   _id: string;
   username: string;
@@ -117,7 +126,7 @@ export function VerifyOwners() {
                       <td className="px-6 py-4">
                         {owner.businessLicense ? (
                           <a
-                            href={owner.businessLicense}
+                            href={licenseUrl(owner.businessLicense)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
@@ -188,7 +197,7 @@ export function VerifyOwners() {
                 <span className="text-sm text-gray-600">Business License</span>
                 {selected.businessLicense ? (
                   <a
-                    href={selected.businessLicense}
+                    href={licenseUrl(selected.businessLicense)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
