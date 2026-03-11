@@ -83,7 +83,7 @@ export function MyBookings() {
               onClick={() => setFilter(status)}
               className={`px-4 py-2 rounded-lg font-medium capitalize transition-colors ${
                 filter === status
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
@@ -94,7 +94,7 @@ export function MyBookings() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         ) : filteredBookings.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
@@ -102,7 +102,7 @@ export function MyBookings() {
             <p className="text-gray-600 mb-4">No bookings found</p>
             <Link
               to="/student/search"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+              className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 font-medium transition-colors"
             >
               Search Hostels
             </Link>

@@ -15,8 +15,8 @@ export function CompareHostels() {
 
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
           <div className="mb-6 flex items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100">
-              <ArrowRightLeft size={24} className="text-blue-600" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20">
+              <ArrowRightLeft size={24} className="text-primary" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">Comparison Flow Placeholder</h2>
@@ -31,7 +31,7 @@ export function CompareHostels() {
           <div className="grid gap-4 md:grid-cols-3">
             {['Choose hostels', 'Review side-by-side', 'Decide faster'].map((step, index) => (
               <div key={step} className="rounded-xl border border-gray-200 bg-gray-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                   Step 0{index + 1}
                 </p>
                 <h3 className="mt-2 font-semibold text-gray-900">{step}</h3>
@@ -41,7 +41,7 @@ export function CompareHostels() {
 
           <Link
             to="/student/search"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white transition-colors hover:bg-primary/90"
           >
             <Search size={18} />
             Go to Search

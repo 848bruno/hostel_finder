@@ -274,7 +274,7 @@ export function StudentDashboard() {
       const color = isPending
         ? 'text-yellow-600 dark:text-yellow-400'
         : isConfirmed
-        ? 'text-blue-600 dark:text-blue-400'
+        ? 'text-primary dark:text-blue-400'
         : 'text-muted-foreground';
 
       return {
@@ -297,7 +297,7 @@ export function StudentDashboard() {
     if (status === 'pending' || status === 'pending_payment') {
       return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
     }
-    if (status === 'completed') return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+    if (status === 'completed') return 'bg-primary/20 text-primary dark:bg-blue-900/30 dark:text-blue-300';
     return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
   };
 

@@ -156,7 +156,7 @@ export function ManageHostels() {
                             <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${hostel.isApproved ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>
                               {hostel.isApproved ? '● Approved' : '○ Pending'}
                             </span>
-                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${hostel.isActive ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}`}>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${hostel.isActive ? 'bg-primary/20 text-primary dark:bg-blue-900/30 dark:text-blue-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}`}>
                               {hostel.isActive ? 'Active' : 'Inactive'}
                             </span>
                           </div>

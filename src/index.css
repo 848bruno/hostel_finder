@@ -181,10 +181,6 @@
     color: rgb(248 250 252 / 1);
   }
 
-  .dark .bg-blue-50 {
-    background-color: rgb(30 41 59 / 1);
-  }
-
   .dark .bg-green-50 {
     background-color: rgb(20 83 45 / 0.18);
   }
@@ -203,12 +199,6 @@
 
   .dark .bg-orange-50 {
     background-color: rgb(124 45 18 / 0.2);
-  }
-
-  .dark .text-blue-800,
-  .dark .text-blue-700,
-  .dark .text-blue-600 {
-    color: rgb(96 165 250 / 1);
   }
 
   .dark .text-green-800,
@@ -235,10 +225,6 @@
     color: rgb(196 181 253 / 1);
   }
 
-  .dark .bg-blue-100 {
-    background-color: rgb(30 58 138 / 0.35);
-  }
-
   .dark .bg-green-100 {
     background-color: rgb(20 83 45 / 0.35);
   }
@@ -257,11 +243,6 @@
 
   .dark .bg-orange-100 {
     background-color: rgb(124 45 18 / 0.35);
-  }
-
-  .dark .border-blue-200,
-  .dark .border-blue-300 {
-    border-color: rgb(59 130 246 / 0.35);
   }
 
   .dark .border-green-200 {

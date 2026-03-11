@@ -81,12 +81,12 @@ function PhotoGallery({ images, name }: { images: string[]; name: string }) {
 
 // ── Amenity config ─────────────────────────────────────────────────────────────
 const AMENITY_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  wifi:         { label: 'Wi-Fi',         icon: <Wifi size={18} />,      color: 'text-blue-600 bg-blue-50 border border-blue-100' },
+  wifi:         { label: 'Wi-Fi',         icon: <Wifi size={18} />,      color: 'text-primary bg-primary/10 border border-blue-100' },
   parking:      { label: 'Parking',       icon: <Car size={18} />,       color: 'text-slate-600 bg-slate-50 border border-slate-100' },
   security:     { label: 'Security',      icon: <Shield size={18} />,    color: 'text-green-600 bg-green-50 border border-green-100' },
   airCondition: { label: 'Air Condition', icon: <Wind size={18} />,      color: 'text-cyan-600 bg-cyan-50 border border-cyan-100' },
   kitchen:      { label: 'Kitchen',       icon: <Utensils size={18} />,  color: 'text-orange-600 bg-orange-50 border border-orange-100' },
-  laundry:      { label: 'Laundry',       icon: <Sparkles size={18} />,  color: 'text-purple-600 bg-purple-50 border border-purple-100' },
+  laundry:      { label: 'Laundry',       icon: <Sparkles size={18} />,  color: 'text-primary bg-purple-50 border border-purple-100' },
   water:        { label: 'Water Supply',  icon: <Droplets size={18} />,  color: 'text-teal-600 bg-teal-50 border border-teal-100' },
   electricity:  { label: 'Electricity',   icon: <Zap size={18} />,       color: 'text-yellow-600 bg-yellow-50 border border-yellow-100' },
 };
@@ -164,7 +164,7 @@ function RateModal({ hostelId, hostelName, onClose, onSuccess }: {
             <textarea value={review} onChange={(e) => setReview(e.target.value)}
               placeholder="Share your experience — cleanliness, amenities, location…"
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
             />
           </div>
           <div className="flex gap-3">
@@ -261,7 +261,7 @@ export function HostelDetails() {
   if (loading) return (
     <DashboardLayout>
       <div className="flex flex-col items-center justify-center py-24 gap-3">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
         <p className="text-gray-400 text-sm">Loading hostel…</p>
       </div>
     </DashboardLayout>
@@ -272,7 +272,7 @@ export function HostelDetails() {
       <div className="text-center py-24">
         <Building2 size={56} className="mx-auto mb-4 text-gray-200" />
         <p className="text-gray-600 font-medium">Hostel not found</p>
-        <button onClick={() => navigate(-1)} className="mt-3 text-blue-600 text-sm hover:underline">Go back</button>
+        <button onClick={() => navigate(-1)} className="mt-3 text-primary text-sm hover:underline">Go back</button>
       </div>
     </DashboardLayout>
   );
@@ -315,7 +315,7 @@ export function HostelDetails() {
                 {/* Badges */}
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full capitalize ${
-                    hostel.hostelType === 'male' ? 'bg-blue-100 text-blue-700' :
+                    hostel.hostelType === 'male' ? 'bg-primary/20 text-primary/90' :
                     hostel.hostelType === 'female' ? 'bg-pink-100 text-pink-700' : 'bg-violet-100 text-violet-700'
                   }`}>
                     <Users size={10} className="inline mr-1" />{hostel.hostelType}
@@ -336,7 +336,7 @@ export function HostelDetails() {
                     </div>
                   )}
                   {hostel.location?.nearbyUniversity && (
-                    <div className="flex items-center gap-1.5 text-blue-600 text-sm font-semibold">
+                    <div className="flex items-center gap-1.5 text-primary text-sm font-semibold">
                       <GraduationCap size={14} className="flex-shrink-0" />
                       Near {hostel.location.nearbyUniversity}
                     </div>
@@ -358,7 +358,7 @@ export function HostelDetails() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
               {[
                 { label: 'Monthly Rent', value: `KSh ${Number(hostel.pricePerMonth).toLocaleString()}`, sub: 'per room', icon: <DollarSign size={20} />, from: 'from-emerald-50', to: 'to-green-50', border: 'border-emerald-100', text: 'text-emerald-700' },
-                { label: 'Available', value: String(hostel.availableRooms), sub: 'rooms free', icon: null, from: 'from-blue-50', to: 'to-sky-50', border: 'border-blue-100', text: 'text-blue-700' },
+                { label: 'Available', value: String(hostel.availableRooms), sub: 'rooms free', icon: null, from: 'from-blue-50', to: 'to-sky-50', border: 'border-blue-100', text: 'text-primary/90' },
                 { label: 'Total Rooms', value: String(hostel.totalRooms), sub: 'capacity', icon: null, from: 'from-gray-50', to: 'to-slate-50', border: 'border-gray-100', text: 'text-gray-800' },
                 { label: 'Occupancy', value: `${occupancy}%`, sub: 'filled', icon: null, from: 'from-violet-50', to: 'to-purple-50', border: 'border-violet-100', text: 'text-violet-700' },
               ].map((s) => (
@@ -407,7 +407,7 @@ export function HostelDetails() {
             {/* Owner */}
             {hostel.owner && (
               <div className="mb-8 flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
                   {hostel.owner.username?.[0]?.toUpperCase() ?? 'O'}
                 </div>
                 <div>
@@ -439,7 +439,7 @@ export function HostelDetails() {
                 className={`w-full py-4 text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 shadow-md ${
                   hasConfirmedBooking
                     ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-100'
-                    : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-100'
+                    : 'bg-primary hover:bg-primary/90 active:bg-blue-800 shadow-blue-100'
                 }`}>
                 <Calendar size={22} />
                 {hasConfirmedBooking
@@ -489,7 +489,7 @@ export function HostelDetails() {
               {hostel.ratings.map((r, idx) => {
                 const uname = typeof r.student === 'object' ? r.student.username : 'Student';
                 const initial = uname?.[0]?.toUpperCase() ?? 'S';
-                const palette = ['bg-blue-500', 'bg-violet-500', 'bg-emerald-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
+                const palette = ['bg-primary/100', 'bg-violet-500', 'bg-emerald-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
                 return (
                   <div key={idx} className="flex gap-4 pb-5 border-b border-gray-100 last:border-0 last:pb-0">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-full ${palette[idx % palette.length]} flex items-center justify-center text-white font-bold text-sm`}>
@@ -537,14 +537,14 @@ export function HostelDetails() {
                   <input type="date" value={bookingData.startDate}
                     onChange={(e) => setBookingData(d => ({ ...d, startDate: e.target.value }))}
                     min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">Check-out</label>
                   <input type="date" value={bookingData.endDate}
                     onChange={(e) => setBookingData(d => ({ ...d, endDate: e.target.value }))}
                     min={bookingData.startDate || new Date().toISOString().split('T')[0]}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm" />
                 </div>
               </div>
 
@@ -554,7 +554,7 @@ export function HostelDetails() {
                 </label>
                 <input type="number" min={1} max={hostel.availableRooms} value={bookingData.rooms}
                   onChange={(e) => setBookingData(d => ({ ...d, rooms: Math.max(1, Math.min(hostel.availableRooms, parseInt(e.target.value) || 1)) }))}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
 
               <div>
@@ -565,7 +565,7 @@ export function HostelDetails() {
                       onClick={() => setBookingData(d => ({ ...d, paymentMethod: m }))}
                       className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
                         bookingData.paymentMethod === m
-                          ? 'border-blue-600 bg-blue-50 text-blue-700'
+                          ? 'border-primary bg-primary/10 text-primary/90'
                           : 'border-gray-200 text-gray-600 hover:border-gray-300'
                       }`}>
                       <CreditCard size={16} />
@@ -576,7 +576,7 @@ export function HostelDetails() {
               </div>
 
               {/* Summary */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 text-sm space-y-2">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-primary/30 rounded-xl p-4 text-sm space-y-2">
                 <div className="flex justify-between text-gray-600">
                   <span>Price / month</span>
                   <span className="font-semibold text-gray-800">KSh {hostel.pricePerMonth.toLocaleString()}</span>
@@ -593,7 +593,7 @@ export function HostelDetails() {
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between font-extrabold text-blue-800 pt-2 border-t border-blue-200 text-base">
+                <div className="flex justify-between font-extrabold text-primary pt-2 border-t border-primary/30 text-base">
                   <span>Total</span>
                   <span>KSh {amountPreview > 0 ? amountPreview.toLocaleString() : '—'}</span>
                 </div>
@@ -604,7 +604,7 @@ export function HostelDetails() {
                   className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 font-medium transition-colors">Cancel</button>
                 <button onClick={handleBooking}
                   disabled={!bookingData.startDate || !bookingData.endDate || bookingLoading || amountPreview <= 0}
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  className="flex-1 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {bookingLoading ? 'Creating…' : 'Proceed to Payment'}
                 </button>
               </div>

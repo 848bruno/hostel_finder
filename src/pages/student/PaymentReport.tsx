@@ -94,8 +94,8 @@ export function StudentPaymentReport() {
 
           <div className="bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl p-5">
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center">
-                <CheckCircle size={18} className="text-blue-600" />
+              <div className="w-9 h-9 bg-primary/20 rounded-lg flex items-center justify-center">
+                <CheckCircle size={18} className="text-primary" />
               </div>
               <span className="text-sm font-medium text-gray-600">Confirmed Bookings</span>
             </div>
@@ -123,7 +123,7 @@ export function StudentPaymentReport() {
               onClick={() => setFilter(s)}
               className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                 filter === s
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
@@ -135,7 +135,7 @@ export function StudentPaymentReport() {
         {/* Table / Cards */}
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
           </div>
         ) : filteredBookings.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
@@ -143,7 +143,7 @@ export function StudentPaymentReport() {
             <p className="text-gray-500 font-medium">No records found</p>
             <Link
               to="/student/search"
-              className="inline-block mt-4 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="inline-block mt-4 px-5 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
             >
               Find a Hostel
             </Link>
@@ -230,7 +230,7 @@ export function StudentPaymentReport() {
                   {booking.hostel?._id && (
                     <Link
                       to={`/student/hostel/${booking.hostel._id}`}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-sm text-primary hover:text-primary/90 font-medium"
                     >
                       View Hostel →
                     </Link>

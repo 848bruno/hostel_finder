@@ -157,7 +157,7 @@ export function AddHostel() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hostel Name <span className="text-red-500">*</span></label>
                 <input type="text" required value={formData.name}
                   onChange={(e) => field('name', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter hostel name" />
               </div>
 
@@ -165,7 +165,7 @@ export function AddHostel() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
                 <textarea rows={3} required value={formData.description}
                   onChange={(e) => field('description', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Describe your hostel..." />
               </div>
 
@@ -173,7 +173,7 @@ export function AddHostel() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone <span className="text-red-500">*</span></label>
                 <input type="tel" required value={formData.contactPhone}
                   onChange={(e) => field('contactPhone', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="e.g. +254 700 000000" />
               </div>
 
@@ -181,7 +181,7 @@ export function AddHostel() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Hostel Type <span className="text-red-500">*</span></label>
                 <select required value={formData.hostelType}
                   onChange={(e) => field('hostelType', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
                   <option value="male">Male Only</option>
                   <option value="female">Female Only</option>
                   <option value="mixed">Mixed</option>
@@ -193,19 +193,19 @@ export function AddHostel() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Total Rooms <span className="text-red-500">*</span></label>
                   <input type="number" required min="1" value={formData.totalRooms || ''}
                     onChange={(e) => field('totalRooms', parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Available Rooms <span className="text-red-500">*</span></label>
                   <input type="number" required min="0" value={formData.availableRooms || ''}
                     onChange={(e) => field('availableRooms', parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Price / Month (KSh) <span className="text-red-500">*</span></label>
                   <input type="number" required min="1" value={formData.pricePerMonth || ''}
                     onChange={(e) => field('pricePerMonth', parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
               </div>
             </div>
@@ -217,7 +217,7 @@ export function AddHostel() {
               <h2 className="text-xl font-bold text-gray-900">Location</h2>
               <div className="flex items-center gap-2 text-sm">
                 {geoStatus === 'detecting' && (
-                  <><Loader size={14} className="animate-spin text-blue-500" /><span className="text-blue-600">Detecting coordinates...</span></>
+                  <><Loader size={14} className="animate-spin text-blue-500" /><span className="text-primary">Detecting coordinates...</span></>
                 )}
                 {geoStatus === 'found' && (
                   <><CheckCircle size={14} className="text-green-500" /><span className="text-green-600">Coordinates detected</span></>
@@ -233,14 +233,14 @@ export function AddHostel() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Street Address <span className="text-red-500">*</span></label>
                   <input type="text" required value={formData.address}
                     onChange={(e) => field('address', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="e.g. Kimathi Street, Nairobi" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">City <span className="text-red-500">*</span></label>
                   <input type="text" required value={formData.city}
                     onChange={(e) => field('city', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="e.g. Nairobi" />
                 </div>
               </div>
@@ -248,7 +248,7 @@ export function AddHostel() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nearby University / Campus</label>
                 <input type="text" value={formData.nearbyUniversity}
                   onChange={(e) => field('nearbyUniversity', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="e.g. University of Nairobi" />
               </div>
             </div>
@@ -286,7 +286,7 @@ export function AddHostel() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg hover:border-blue-400 hover:text-primary transition-colors"
               >
                 <ImagePlus size={18} />
                 {selectedImages.length === 0 ? 'Add Photos' : `Add More (${selectedImages.length}/10)`}
@@ -312,7 +312,7 @@ export function AddHostel() {
                   <input type="checkbox"
                     checked={formData[key]}
                     onChange={(e) => field(key, e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
                   <span className="text-sm text-gray-700">{label}</span>
                 </label>
               ))}
@@ -325,7 +325,7 @@ export function AddHostel() {
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              className="flex-1 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               <Save size={20} />
               {saving ? 'Saving...' : 'Save Hostel'}
             </button>

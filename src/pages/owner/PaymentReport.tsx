@@ -124,8 +124,8 @@ export function OwnerPaymentReport() {
 
           <div className="bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-100 rounded-xl p-5">
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center">
-                <CheckCircle size={18} className="text-blue-600" />
+              <div className="w-9 h-9 bg-primary/20 rounded-lg flex items-center justify-center">
+                <CheckCircle size={18} className="text-primary" />
               </div>
               <span className="text-sm font-medium text-gray-600">Confirmed</span>
             </div>
@@ -165,7 +165,7 @@ export function OwnerPaymentReport() {
                 onClick={() => setFilter(s)}
                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                   filter === s
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-primary text-white'
                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                 }`}
               >
@@ -177,7 +177,7 @@ export function OwnerPaymentReport() {
             <select
               value={hostelFilter}
               onChange={(e) => setHostelFilter(e.target.value)}
-              className="ml-auto px-4 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="ml-auto px-4 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">All Hostels</option>
               {hostels.map((h) => (
@@ -190,7 +190,7 @@ export function OwnerPaymentReport() {
         {/* Booking list */}
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
           </div>
         ) : filteredBookings.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
@@ -205,7 +205,7 @@ export function OwnerPaymentReport() {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                   <div className="flex items-start gap-4">
                     {/* Student avatar */}
-                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold flex-shrink-0">
                       {booking.student?.username?.[0]?.toUpperCase() ?? 'S'}
                     </div>
                     <div>

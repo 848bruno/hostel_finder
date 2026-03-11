@@ -17,7 +17,7 @@ export function CommissionManagement() {
           {[
             { label: 'Default Rate', value: `${defaultRate}%`, icon: Percent, color: 'text-primary' },
             { label: 'Total Earned (Month)', value: 'KES 125,400', icon: DollarSign, color: 'text-green-600 dark:text-green-400' },
-            { label: 'Active Owners', value: '60', icon: Building2, color: 'text-blue-600 dark:text-blue-400' },
+            { label: 'Active Owners', value: '60', icon: Building2, color: 'text-primary dark:text-blue-400' },
           ].map(s => (
             <div key={s.label} className="bg-card rounded-2xl p-5 shadow-card border border-border">
               <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium mb-2"><s.icon size={14} />{s.label}</div>

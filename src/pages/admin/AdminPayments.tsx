@@ -82,7 +82,7 @@ export function AdminPayments() {
               onClick={() => setFilter(filterOption as typeof filter)}
               className={`px-4 py-2 rounded-lg font-medium capitalize transition-colors ${
                 filter === filterOption
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
@@ -93,7 +93,7 @@ export function AdminPayments() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         ) : filteredPayments.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">

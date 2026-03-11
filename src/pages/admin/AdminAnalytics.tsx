@@ -71,15 +71,15 @@ export function AdminAnalytics() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="bg-blue-100 p-3 rounded-lg">
-                    <Users className="text-blue-600" size={24} />
+                  <div className="bg-primary/20 p-3 rounded-lg">
+                    <Users className="text-primary" size={24} />
                   </div>
                 </div>
                 <h3 className="text-sm text-gray-600 mb-1">Total Users</h3>
@@ -131,7 +131,7 @@ export function AdminAnalytics() {
                   </div>
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                     <span className="text-gray-600">All Time</span>
-                    <span className="font-bold text-blue-600">
+                    <span className="font-bold text-primary">
                       KSh {analytics.totalRevenue.toLocaleString()}
                     </span>
                   </div>
@@ -149,7 +149,7 @@ export function AdminAnalytics() {
                 <div className="space-y-4">
                   <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
                     <p className="text-sm text-blue-900 mb-2">Monthly User Growth</p>
-                    <p className="text-3xl font-bold text-blue-600">
+                    <p className="text-3xl font-bold text-primary">
                       {analytics.platformGrowth >= 0 ? '+' : ''}{analytics.platformGrowth.toFixed(1)}%
                     </p>
                   </div>
@@ -165,20 +165,20 @@ export function AdminAnalytics() {
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-6">
               <h3 className="font-semibold text-blue-900 mb-3">Key Metrics Summary</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p className="text-blue-800 mb-1"><strong>User Base:</strong> {analytics.totalUsers} users</p>
-                  <p className="text-blue-700">{analytics.pendingOwners} owner{analytics.pendingOwners !== 1 ? 's' : ''} pending approval</p>
+                  <p className="text-primary mb-1"><strong>User Base:</strong> {analytics.totalUsers} users</p>
+                  <p className="text-primary/90">{analytics.pendingOwners} owner{analytics.pendingOwners !== 1 ? 's' : ''} pending approval</p>
                 </div>
                 <div>
-                  <p className="text-blue-800 mb-1"><strong>Inventory:</strong> {analytics.totalHostels} hostels</p>
-                  <p className="text-blue-700">Average {(analytics.totalBookings / analytics.totalHostels || 0).toFixed(1)} bookings each</p>
+                  <p className="text-primary mb-1"><strong>Inventory:</strong> {analytics.totalHostels} hostels</p>
+                  <p className="text-primary/90">Average {(analytics.totalBookings / analytics.totalHostels || 0).toFixed(1)} bookings each</p>
                 </div>
                 <div>
-                  <p className="text-blue-800 mb-1"><strong>Revenue:</strong> KSh {analytics.totalRevenue.toLocaleString()}</p>
-                  <p className="text-blue-700">KSh {analytics.monthlyRevenue.toLocaleString()} this month</p>
+                  <p className="text-primary mb-1"><strong>Revenue:</strong> KSh {analytics.totalRevenue.toLocaleString()}</p>
+                  <p className="text-primary/90">KSh {analytics.monthlyRevenue.toLocaleString()} this month</p>
                 </div>
               </div>
             </div>

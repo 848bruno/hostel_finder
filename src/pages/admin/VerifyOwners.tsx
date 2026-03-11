@@ -86,7 +86,7 @@ export function VerifyOwners() {
             {(['pending', 'all'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-4 py-2 rounded-lg font-medium capitalize transition-colors ${
-                  tab === t ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  tab === t ? 'bg-primary text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                 }`}>
                 {t === 'pending' ? `Pending (${owners.filter(o => !o.isApproved).length})` : 'All Owners'}
               </button>
@@ -96,7 +96,7 @@ export function VerifyOwners() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
           </div>
         ) : displayed.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
@@ -129,7 +129,7 @@ export function VerifyOwners() {
                             href={licenseUrl(owner.businessLicense)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                            className="flex items-center gap-1 text-sm text-primary hover:text-primary"
                           >
                             <FileText size={14} /> View
                           </a>
@@ -151,7 +151,7 @@ export function VerifyOwners() {
                       </td>
                       <td className="px-6 py-4">
                         <button onClick={() => { setSelected(owner); setActionError(''); }}
-                          className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 text-sm">
+                          className="text-primary hover:text-primary font-medium flex items-center gap-1 text-sm">
                           <Eye size={14} /> Review
                         </button>
                       </td>
@@ -200,7 +200,7 @@ export function VerifyOwners() {
                     href={licenseUrl(selected.businessLicense)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+                    className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary"
                   >
                     <ExternalLink size={13} /> Open Document
                   </a>

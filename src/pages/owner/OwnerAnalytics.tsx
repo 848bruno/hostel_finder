@@ -71,7 +71,7 @@ export function OwnerAnalytics() {
                 { label: 'Total Revenue', value: `KES ${analytics.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-600 dark:text-green-400' },
                 { label: 'Monthly Revenue', value: `KES ${analytics.monthlyRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-primary' },
                 { label: 'Avg Occupancy', value: `${occupancyRate}%`, icon: BedDouble, color: 'text-yellow-600 dark:text-yellow-400' },
-                { label: 'Total Bookings', value: analytics.totalBookings, icon: Users, color: 'text-blue-600 dark:text-blue-400' },
+                { label: 'Total Bookings', value: analytics.totalBookings, icon: Users, color: 'text-primary dark:text-blue-400' },
               ].map(s => (
                 <motion.div key={s.label} whileHover={{ y: -2 }} className="bg-card rounded-2xl p-5 shadow-card border border-border">
                   <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium mb-2"><s.icon size={14} />{s.label}</div>

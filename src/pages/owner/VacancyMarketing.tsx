@@ -39,7 +39,7 @@ export function VacancyMarketing() {
             { label: 'Total Vacancies', value: vacantRooms.length, icon: Building2, color: 'text-primary' },
             { label: 'Total Views (30d)', value: '560', icon: Eye, color: 'text-green-600 dark:text-green-400' },
             { label: 'Inquiries', value: '23', icon: Users, color: 'text-yellow-600 dark:text-yellow-400' },
-            { label: 'Conversion Rate', value: '12%', icon: TrendingUp, color: 'text-blue-600 dark:text-blue-400' },
+            { label: 'Conversion Rate', value: '12%', icon: TrendingUp, color: 'text-primary dark:text-blue-400' },
           ].map(s => (
             <div key={s.label} className="p-4 rounded-xl bg-card border border-border">
               <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium mb-2"><s.icon size={14} />{s.label}</div>

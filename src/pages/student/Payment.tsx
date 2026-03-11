@@ -117,7 +117,7 @@ export function Payment() {
     return (
       <DashboardLayout>
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
         </div>
       </DashboardLayout>
     );
@@ -135,7 +135,7 @@ export function Payment() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Waiting for Payment</h2>
             <p className="text-gray-600">{stkMessage}</p>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 text-left space-y-1">
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-sm text-primary text-left space-y-1">
             <p className="font-semibold">What to do:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li>Check your phone for the M-Pesa pop-up prompt</li>
@@ -209,24 +209,24 @@ export function Payment() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Payment Method</h2>
           <div className="space-y-3 mb-6">
             <div className={`w-full flex items-center gap-4 p-4 border-2 rounded-lg ${
-              booking.payment.method === 'mpesa' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
+              booking.payment.method === 'mpesa' ? 'border-primary bg-primary/10' : 'border-gray-200'
             }`}>
-              <Smartphone className={booking.payment.method === 'mpesa' ? 'text-blue-600' : 'text-gray-400'} />
+              <Smartphone className={booking.payment.method === 'mpesa' ? 'text-primary' : 'text-gray-400'} />
               <div className="flex-1 text-left">
                 <div className="font-semibold text-gray-900">M-Pesa</div>
                 <div className="text-sm text-gray-600">Pay with your mobile money</div>
               </div>
-              {booking.payment.method === 'mpesa' && <Check className="text-blue-600" />}
+              {booking.payment.method === 'mpesa' && <Check className="text-primary" />}
             </div>
             <div className={`w-full flex items-center gap-4 p-4 border-2 rounded-lg ${
-              booking.payment.method === 'card' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
+              booking.payment.method === 'card' ? 'border-primary bg-primary/10' : 'border-gray-200'
             }`}>
-              <CreditCard className={booking.payment.method === 'card' ? 'text-blue-600' : 'text-gray-400'} />
+              <CreditCard className={booking.payment.method === 'card' ? 'text-primary' : 'text-gray-400'} />
               <div className="flex-1 text-left">
                 <div className="font-semibold text-gray-900">Credit/Debit Card</div>
                 <div className="text-sm text-gray-600">Pay with Visa or Mastercard</div>
               </div>
-              {booking.payment.method === 'card' && <Check className="text-blue-600" />}
+              {booking.payment.method === 'card' && <Check className="text-primary" />}
             </div>
           </div>
 
@@ -240,7 +240,7 @@ export function Payment() {
                 placeholder="07XXXXXXXX"
                 value={mpesaPhone}
                 onChange={(e) => setMpesaPhone(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           )}
@@ -248,7 +248,7 @@ export function Payment() {
           <button
             onClick={handlePayment}
             disabled={processing || (booking.payment.method === 'mpesa' && !mpesaPhone)}
-            className="w-full py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-primary text-white rounded-lg hover:bg-primary/90 font-semibold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {processing ? 'Processing...' : `Pay KSh ${booking.amount.toLocaleString()}`}
           </button>

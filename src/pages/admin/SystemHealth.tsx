@@ -25,7 +25,7 @@ export function SystemHealth() {
       <div className="space-y-6">
         <div><h1 className="text-2xl font-heading font-bold text-foreground">System Health</h1><p className="text-muted-foreground text-sm mt-1">Monitor platform infrastructure and services</p></div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[{ label: 'Overall Uptime', value: '99.95%', icon: Activity, color: 'text-green-600 dark:text-green-400' }, { label: 'Avg Response', value: '45ms', icon: Cpu, color: 'text-primary' }, { label: 'Services Up', value: `${services.filter(s => s.status === 'healthy').length}/${services.length}`, icon: Server, color: 'text-blue-600 dark:text-blue-400' }, { label: 'DB Size', value: '2.4 GB', icon: Database, color: 'text-purple-600 dark:text-purple-400' }].map(s => (
+          {[{ label: 'Overall Uptime', value: '99.95%', icon: Activity, color: 'text-green-600 dark:text-green-400' }, { label: 'Avg Response', value: '45ms', icon: Cpu, color: 'text-primary' }, { label: 'Services Up', value: `${services.filter(s => s.status === 'healthy').length}/${services.length}`, icon: Server, color: 'text-primary dark:text-blue-400' }, { label: 'DB Size', value: '2.4 GB', icon: Database, color: 'text-primary dark:text-purple-400' }].map(s => (
             <div key={s.label} className="p-4 rounded-xl bg-card border border-border"><div className="flex items-center gap-2 text-xs text-muted-foreground font-medium mb-2"><s.icon size={14} />{s.label}</div><p className={`text-2xl font-bold ${s.color}`}>{s.value}</p></div>
           ))}
         </div>

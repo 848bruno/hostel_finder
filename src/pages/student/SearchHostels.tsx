@@ -970,7 +970,7 @@ export function SearchHostels() {
 
       {loading ? (
         <div className="py-16 text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
         </div>
       ) : filteredHostels.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-16 text-center shadow-card">

@@ -50,6 +50,30 @@ export default {
           DEFAULT: 'hsl(var(--info))',
           foreground: 'hsl(var(--info-foreground))',
         },
+        // Override the default blue, sky, and indigo palettes to dynamically scale with our --primary CSS variable
+        blue: {
+          50: 'color-mix(in hsl, hsl(var(--primary)) 10%, transparent)',
+          100: 'color-mix(in hsl, hsl(var(--primary)) 20%, transparent)',
+          200: 'color-mix(in hsl, hsl(var(--primary)) 30%, transparent)',
+          300: 'color-mix(in hsl, hsl(var(--primary)) 40%, transparent)',
+          400: 'color-mix(in hsl, hsl(var(--primary)) 60%, transparent)',
+          500: 'hsl(var(--primary))',
+          600: 'color-mix(in hsl, hsl(var(--primary)) 80%, black)',
+          700: 'color-mix(in hsl, hsl(var(--primary)) 60%, black)',
+          800: 'color-mix(in hsl, hsl(var(--primary)) 40%, black)',
+          900: 'color-mix(in hsl, hsl(var(--primary)) 20%, black)',
+        },
+        indigo: {
+          50: 'color-mix(in hsl, hsl(var(--primary)) 15%, transparent)',
+          100: 'color-mix(in hsl, hsl(var(--primary)) 25%, transparent)',
+          400: 'color-mix(in hsl, hsl(var(--primary)) 50%, black)',
+          500: 'color-mix(in hsl, hsl(var(--primary)) 70%, black)',
+          600: 'color-mix(in hsl, hsl(var(--primary)) 85%, black)',
+        },
+        sky: {
+          50: 'color-mix(in hsl, hsl(var(--primary)) 8%, transparent)',
+          100: 'color-mix(in hsl, hsl(var(--primary)) 15%, transparent)',
+        }
       },
       fontFamily: {
         heading: ['Plus Jakarta Sans', 'sans-serif'],

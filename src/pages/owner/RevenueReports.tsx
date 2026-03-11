@@ -40,7 +40,7 @@ export function RevenueReports() {
             { label: 'Total Income', value: `KES ${(totalIncome/1e6).toFixed(1)}M`, icon: DollarSign, color: 'text-green-600 dark:text-green-400', trend: '+12.5%' },
             { label: 'Total Expenses', value: `KES ${(totalExpenses/1e6).toFixed(1)}M`, icon: TrendingDown, color: 'text-red-600 dark:text-red-400', trend: '+8.2%' },
             { label: 'Net Profit', value: `KES ${(netProfit/1e6).toFixed(1)}M`, icon: TrendingUp, color: 'text-primary', trend: '+15.3%' },
-            { label: 'Profit Margin', value: `${profitMargin}%`, icon: Receipt, color: 'text-blue-600 dark:text-blue-400', trend: 'Healthy' },
+            { label: 'Profit Margin', value: `${profitMargin}%`, icon: Receipt, color: 'text-primary dark:text-blue-400', trend: 'Healthy' },
           ].map(s => (
             <div key={s.label} className="p-4 rounded-xl bg-card border border-border">
               <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium mb-2"><s.icon size={14} />{s.label}</div>

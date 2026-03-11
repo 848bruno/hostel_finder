@@ -114,7 +114,7 @@ export function AdminHostels() {
             {(['pending', 'approved'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-4 py-2 rounded-lg font-medium capitalize transition-colors ${
-                  tab === t ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  tab === t ? 'bg-primary text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                 }`}>
                 {t === 'pending' ? `Pending (${pendingHostels.length})` : `Approved (${approvedHostels.length})`}
               </button>
@@ -132,7 +132,7 @@ export function AdminHostels() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
           </div>
         ) : displayed.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200">

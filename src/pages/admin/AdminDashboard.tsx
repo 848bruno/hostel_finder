@@ -105,7 +105,7 @@ export function AdminDashboard() {
             {[
               { label: 'Database Status', value: 'Healthy', bg: 'bg-green-100 dark:bg-green-900/30', color: 'text-green-700 dark:text-green-400' },
               { label: 'API Response', value: '< 100ms', bg: 'bg-green-100 dark:bg-green-900/30', color: 'text-green-700 dark:text-green-400' },
-              { label: 'Total Students', value: stats.totalStudents.toString(), bg: 'bg-blue-50 dark:bg-blue-900/20', color: 'text-blue-700 dark:text-blue-300' },
+              { label: 'Total Students', value: stats.totalStudents.toString(), bg: 'bg-primary/10 dark:bg-blue-900/20', color: 'text-primary/90 dark:text-blue-300' },
               { label: 'Total Owners', value: `${stats.totalOwners} (${stats.pendingOwners} pending)`, bg: 'bg-yellow-50 dark:bg-yellow-900/20', color: 'text-yellow-700 dark:text-yellow-300' },
               { label: 'Hostels Listed', value: `${stats.totalHostels} (${stats.pendingHostels} pending)`, bg: 'bg-purple-50 dark:bg-purple-900/20', color: 'text-purple-700 dark:text-purple-300' },
             ].map(item => (

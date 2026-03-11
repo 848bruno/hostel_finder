@@ -61,7 +61,7 @@ export function PaymentSuccess() {
     return (
       <DashboardLayout>
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </DashboardLayout>
     );
@@ -146,8 +146,8 @@ export function PaymentSuccess() {
           </div>
         )}
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
+        <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+          <p className="text-sm text-primary">
             A confirmation email has been sent to your registered email address with all the booking details.
           </p>
         </div>
@@ -161,7 +161,7 @@ export function PaymentSuccess() {
           </button>
           <Link
             to="/student/dashboard"
-            className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center justify-center gap-2"
+            className="flex-1 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 font-medium transition-colors flex items-center justify-center gap-2"
           >
             <Home size={20} />
             Go to Dashboard

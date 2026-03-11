@@ -29,8 +29,8 @@ export function ForgotPassword() {
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center">
-              <KeyRound className="h-8 w-8 text-blue-600" />
+            <div className="mx-auto h-16 w-16 bg-primary/20 rounded-full flex items-center justify-center">
+              <KeyRound className="h-8 w-8 text-primary" />
             </div>
             <h2 className="mt-6 text-3xl font-bold text-gray-900">Forgot Password</h2>
             <p className="mt-2 text-gray-600">
@@ -66,19 +66,19 @@ export function ForgotPassword() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter your registered email"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 transition-colors"
+                className="w-full py-3 bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-50 transition-colors"
               >
                 {loading ? 'Sending...' : 'Send Reset Link'}
               </button>
               <div className="text-center">
-                <Link to="/login" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                <Link to="/login" className="text-sm text-primary hover:text-primary/90 font-medium">
                   Back to Login
                 </Link>
               </div>
