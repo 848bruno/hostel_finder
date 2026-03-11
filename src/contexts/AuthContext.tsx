@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Stub - settings pages can be migrated separately
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const updateProfile = async (_updates: Partial<AuthUser>): Promise<void> => {
     const refreshed = await api.get<AuthUser>('/auth/profile');
     setUser(refreshed);

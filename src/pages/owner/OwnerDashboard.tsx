@@ -215,7 +215,10 @@ export function OwnerDashboard() {
                 <YAxis className="text-muted-foreground" tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
                   contentStyle={{ borderRadius: '12px', border: '1px solid hsl(214, 20%, 90%)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                  formatter={(value: any) => [`KES ${Number(value).toLocaleString()}`, 'Revenue']}
+                  formatter={
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (value: any) => [`KES ${Number(value).toLocaleString()}`, 'Revenue']
+                  }
                 />
                 <Area type="monotone" dataKey="revenue" stroke="hsl(220, 80%, 50%)" fill="url(#revenueGradient)" strokeWidth={2.5} />
               </AreaChart>
