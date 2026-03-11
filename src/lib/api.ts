@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5100/api';
+const REQUEST_TIMEOUT_MS = 8000;
 
 const TOKEN_KEY = 'shf_token';
 
@@ -28,6 +29,8 @@ async function request<T>(
   isFormData = false
 ): Promise<T> {
   const headers: Record<string, string> = {};
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   const token = getToken();
   if (token) {
@@ -38,23 +41,39 @@ async function request<T>(
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: isFormData
-      ? (body as FormData)
-      : body !== undefined
-      ? JSON.stringify(body)
-      : undefined,
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers,
+      body: isFormData
+        ? (body as FormData)
+        : body !== undefined
+        ? JSON.stringify(body)
+        : undefined,
+      signal: controller.signal,
+    });
 
-  const data = await response.json();
+    const raw = await response.text();
+    const data = raw ? JSON.parse(raw) : {};
 
-  if (!response.ok) {
-    throw new ApiError(response.status, data.message || 'Request failed');
+    if (!response.ok) {
+      throw new ApiError(response.status, data.message || 'Request failed');
+    }
+
+    return data as T;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError(408, 'Request timed out. Check that the backend is running.');
+    }
+
+    throw new ApiError(0, 'Could not reach the backend. Check that the API server is running.');
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-
-  return data as T;
 }
 
 export const api = {

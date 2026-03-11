@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { ThemeToggle } from '../ThemeToggle';
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -17,8 +18,10 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             <Link to="/" className="text-2xl font-bold text-gray-900">
               Smart hostel finder
             </Link>
-            {!isLanding && (
-              <div className="flex space-x-4">
+            <div className="flex items-center space-x-4">
+              <ThemeToggle />
+              {!isLanding && (
+                <>
                 <Link
                   to="/login"
                   className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
@@ -31,8 +34,9 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 >
                   Register
                 </Link>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </nav>

@@ -4,7 +4,12 @@ export interface BackendHostel {
   _id: string;
   name: string;
   description?: string;
-  location: { address?: string; city?: string; nearbyUniversity?: string };
+  location: {
+    address?: string;
+    city?: string;
+    nearbyUniversity?: string;
+    coordinates?: [number, number] | number[];
+  };
   pricePerMonth: number;
   hostelType: 'male' | 'female' | 'mixed';
   totalRooms: number;

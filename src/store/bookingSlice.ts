@@ -7,7 +7,16 @@ export interface BookingItem {
   endDate: string;
   amount: number;
   roomsBooked: number;
-  payment?: { method: string; status: string; reference?: string };
+  payment?: {
+    method: string;
+    status: string;
+    reference?: string;
+    paidAt?: string;
+  };
+  receipt?: {
+    receiptNumber?: string;
+    issuedAt?: string;
+  };
   hostel?: {
     _id: string;
     name: string;

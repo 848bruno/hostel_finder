@@ -1,157 +1,816 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ArrowRightLeft,
+  ArrowUpDown,
+  Building2,
+  LayoutGrid,
+  Map,
+  MapPin,
+  Navigation,
+  Search,
+  SlidersHorizontal,
+  Star,
+  Users,
+  X,
+} from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { api } from '../../lib/api';
 import { setHostelList } from '../../store/hostelSlice';
 import type { BackendHostel } from '../../store/hostelSlice';
-import type { RootState, AppDispatch } from '../../store';
-import { Search, Filter, MapPin, DollarSign, Users, Star, Navigation } from 'lucide-react';
+import type { AppDispatch, RootState } from '../../store';
+
+type AmenityKey =
+  | 'wifi'
+  | 'parking'
+  | 'laundry'
+  | 'kitchen'
+  | 'security'
+  | 'water'
+  | 'electricity'
+  | 'airCondition';
+
+type SortOption = 'rating' | 'price_low' | 'price_high' | 'available' | 'name' | 'distance';
+type ViewMode = 'grid' | 'map';
+type SearchFilters = {
+  hostelType: 'all' | BackendHostel['hostelType'];
+  city: string;
+  university: string;
+  minPrice: string;
+  maxPrice: string;
+  maxDistance: string;
+} & Record<AmenityKey, boolean>;
+
+const amenityOptions: Array<{ key: AmenityKey; label: string }> = [
+  { key: 'wifi', label: 'WiFi' },
+  { key: 'parking', label: 'Parking' },
+  { key: 'laundry', label: 'Laundry' },
+  { key: 'kitchen', label: 'Kitchen' },
+  { key: 'security', label: 'Security' },
+  { key: 'water', label: 'Water' },
+  { key: 'electricity', label: 'Electricity' },
+  { key: 'airCondition', label: 'Air Conditioning' },
+];
+
+const sortLabels: Record<SortOption, string> = {
+  rating: 'Highest Rated',
+  price_low: 'Price: Low to High',
+  price_high: 'Price: High to Low',
+  available: 'Most Available',
+  name: 'Name A-Z',
+  distance: 'Nearest First',
+};
+
+const createDefaultFilters = (): SearchFilters => ({
+  hostelType: 'all',
+  city: 'all',
+  university: 'all',
+  minPrice: '',
+  maxPrice: '',
+  maxDistance: '',
+  wifi: false,
+  parking: false,
+  laundry: false,
+  kitchen: false,
+  security: false,
+  water: false,
+  electricity: false,
+  airCondition: false,
+});
+
+function getHostelCoordinates(hostel: BackendHostel): [number, number] | null {
+  const raw = hostel.location?.coordinates;
+  if (!Array.isArray(raw) || raw.length < 2) return null;
+
+  const [longitude, latitude] = raw;
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') return null;
+
+  return [latitude, longitude];
+}
+
+function getDistanceKm(origin: [number, number], target: [number, number]): number {
+  const [lat1, lon1] = origin;
+  const [lat2, lon2] = target;
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function HostelMapView({
+  hostels,
+  userLocation,
+  selectedHostelId,
+  onSelectHostel,
+}: {
+  hostels: BackendHostel[];
+  userLocation: [number, number] | null;
+  selectedHostelId: string | null;
+  onSelectHostel: (hostelId: string) => void;
+}) {
+  const plottedHostels = useMemo(() => {
+    const entries = hostels
+      .map((hostel) => {
+        const coords = getHostelCoordinates(hostel);
+        if (!coords) return null;
+
+        return {
+          hostel,
+          latitude: coords[0],
+          longitude: coords[1],
+          distanceKm: userLocation ? getDistanceKm(userLocation, coords) : null,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+    if (entries.length === 0) {
+      return [];
+    }
+
+    const latitudes = entries.map((entry) => entry.latitude);
+    const longitudes = entries.map((entry) => entry.longitude);
+
+    if (userLocation) {
+      latitudes.push(userLocation[0]);
+      longitudes.push(userLocation[1]);
+    }
+
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+    const latSpan = maxLat - minLat || 0.02;
+    const lngSpan = maxLng - minLng || 0.02;
+
+    return entries.map((entry) => ({
+      ...entry,
+      x: ((entry.longitude - minLng) / lngSpan) * 100,
+      y: ((maxLat - entry.latitude) / latSpan) * 100,
+    }));
+  }, [hostels, userLocation]);
+
+  const selectedHostel =
+    plottedHostels.find((entry) => entry.hostel._id === selectedHostelId) ?? plottedHostels[0] ?? null;
+
+  const userPoint = useMemo(() => {
+    if (!userLocation || plottedHostels.length === 0) return null;
+
+    const latitudes = plottedHostels.map((entry) => entry.latitude).concat(userLocation[0]);
+    const longitudes = plottedHostels.map((entry) => entry.longitude).concat(userLocation[1]);
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+    const latSpan = maxLat - minLat || 0.02;
+    const lngSpan = maxLng - minLng || 0.02;
+
+    return {
+      x: ((userLocation[1] - minLng) / lngSpan) * 100,
+      y: ((maxLat - userLocation[0]) / latSpan) * 100,
+    };
+  }, [plottedHostels, userLocation]);
+
+  if (plottedHostels.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-secondary">
+          <Map size={26} className="text-muted-foreground" />
+        </div>
+        <p className="font-medium text-foreground">Map view is unavailable for these listings.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The current hostels do not include location coordinates, so grid view is still the reliable fallback.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+      <div className="border-b border-border px-5 py-4">
+        <h3 className="font-heading text-lg font-bold text-card-foreground">Map View</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Hostel points are plotted from saved coordinates. Click a marker to inspect a listing.
+        </p>
+      </div>
+
+      <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.9fr)]">
+        <div className="relative h-[420px] overflow-hidden rounded-2xl border border-border bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.04),rgba(15,23,42,0))]">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:52px_52px]" />
+
+          {userPoint && (
+            <div
+              className="absolute z-20"
+              style={{ left: `${userPoint.x}%`, top: `${userPoint.y}%`, transform: 'translate(-50%, -50%)' }}
+            >
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-emerald-500 shadow-lg">
+                <Navigation size={12} className="text-white" />
+              </div>
+              <span className="mt-2 block rounded-full bg-emerald-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
+                You
+              </span>
+            </div>
+          )}
+
+          {plottedHostels.map((entry) => {
+            const isSelected = selectedHostel?.hostel._id === entry.hostel._id;
+
+            return (
+              <button
+                key={entry.hostel._id}
+                type="button"
+                onClick={() => onSelectHostel(entry.hostel._id)}
+                className="absolute z-10 -translate-x-1/2 -translate-y-1/2 text-left"
+                style={{ left: `${entry.x}%`, top: `${entry.y}%` }}
+              >
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-full border-2 border-white text-white shadow-lg transition-transform ${
+                    isSelected ? 'scale-110 bg-primary' : 'bg-slate-900/80 hover:scale-105'
+                  }`}
+                >
+                  <MapPin size={18} fill="currentColor" />
+                </div>
+                <span
+                  className={`mt-2 block max-w-[150px] truncate rounded-full px-3 py-1 text-xs font-medium ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background/95 text-foreground shadow-sm'
+                  }`}
+                >
+                  {entry.hostel.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="rounded-2xl border border-border bg-background/60 p-5">
+          {selectedHostel ? (
+            <>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                    Selected Hostel
+                  </p>
+                  <h4 className="mt-2 font-heading text-xl font-bold text-foreground">
+                    {selectedHostel.hostel.name}
+                  </h4>
+                </div>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  {selectedHostel.hostel.hostelType}
+                </span>
+              </div>
+
+              <div className="mt-5 space-y-3 text-sm text-muted-foreground">
+                <p className="flex items-center gap-2">
+                  <MapPin size={14} className="text-primary" />
+                  {selectedHostel.hostel.location.address ?? selectedHostel.hostel.location.city ?? 'Location not set'}
+                </p>
+                {selectedHostel.hostel.location.nearbyUniversity && (
+                  <p className="text-primary">
+                    Near {selectedHostel.hostel.location.nearbyUniversity}
+                  </p>
+                )}
+                {selectedHostel.distanceKm !== null && (
+                  <p>{selectedHostel.distanceKm.toFixed(1)} km from your current location</p>
+                )}
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-card px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Price</p>
+                  <p className="mt-2 font-heading text-2xl font-bold text-primary">
+                    KES {selectedHostel.hostel.pricePerMonth.toLocaleString()}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-card px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Availability</p>
+                  <p className="mt-2 font-heading text-2xl font-bold text-foreground">
+                    {selectedHostel.hostel.availableRooms} rooms
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                to={`/student/hostel/${selectedHostel.hostel._id}`}
+                className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90"
+              >
+                Open Hostel Details
+              </Link>
+            </>
+          ) : null}
+
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-5 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+              Hostel marker
+            </span>
+            {userPoint && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                Your location
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function SearchHostels() {
   const dispatch = useDispatch<AppDispatch>();
   const cachedHostels = useSelector((state: RootState) => state.hostels.list);
   const listLoaded = useSelector((state: RootState) => state.hostels.listLoaded);
+
   const [hostels, setHostels] = useState<BackendHostel[]>(cachedHostels);
-  const [filteredHostels, setFilteredHostels] = useState<BackendHostel[]>([]);
   const [loading, setLoading] = useState(!listLoaded);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
-    hostelType: 'all',
-    minPrice: '',
-    maxPrice: '',
-    wifi: false,
-    parking: false,
-    laundry: false,
-    kitchen: false,
-    security: false,
-  });
+  const [showSort, setShowSort] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('rating');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [filters, setFilters] = useState<SearchFilters>(createDefaultFilters);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [nearbyMode, setNearbyMode] = useState(false);
+  const [selectedMapHostelId, setSelectedMapHostelId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (listLoaded && cachedHostels.length > 0) {
+    if (listLoaded) {
       setHostels(cachedHostels);
       setLoading(false);
-    } else {
-      loadHostels();
+      return;
     }
-  }, []);
-  useEffect(() => { applyFilters(); }, [searchTerm, filters, hostels]);
 
-  const loadHostels = async () => {
+    void loadHostels();
+  }, [cachedHostels, listLoaded]);
+
+  const cityOptions = useMemo(
+    () =>
+      [...new Set(hostels.map((hostel) => hostel.location?.city).filter(Boolean as unknown as (value: string | undefined) => value is string))]
+        .sort((a, b) => a.localeCompare(b)),
+    [hostels]
+  );
+
+  const universityOptions = useMemo(
+    () =>
+      [
+        ...new Set(
+          hostels
+            .map((hostel) => hostel.location?.nearbyUniversity)
+            .filter(Boolean as unknown as (value: string | undefined) => value is string)
+        ),
+      ].sort((a, b) => a.localeCompare(b)),
+    [hostels]
+  );
+
+  const canSortByDistance = useMemo(
+    () => Boolean(userLocation) && hostels.some((hostel) => Boolean(getHostelCoordinates(hostel))),
+    [hostels, userLocation]
+  );
+
+  const filteredHostels = useMemo(() => {
+    let filtered = [...hostels];
+
+    if (searchTerm.trim()) {
+      const query = searchTerm.trim().toLowerCase();
+      filtered = filtered.filter(
+        (hostel) =>
+          hostel.name.toLowerCase().includes(query) ||
+          (hostel.location?.city ?? '').toLowerCase().includes(query) ||
+          (hostel.location?.address ?? '').toLowerCase().includes(query) ||
+          (hostel.location?.nearbyUniversity ?? '').toLowerCase().includes(query)
+      );
+    }
+
+    if (filters.hostelType !== 'all') {
+      filtered = filtered.filter((hostel) => hostel.hostelType === filters.hostelType);
+    }
+
+    if (filters.city !== 'all') {
+      filtered = filtered.filter((hostel) => hostel.location?.city === filters.city);
+    }
+
+    if (filters.university !== 'all') {
+      filtered = filtered.filter(
+        (hostel) => hostel.location?.nearbyUniversity === filters.university
+      );
+    }
+
+    if (filters.minPrice) {
+      filtered = filtered.filter((hostel) => hostel.pricePerMonth >= Number(filters.minPrice));
+    }
+
+    if (filters.maxPrice) {
+      filtered = filtered.filter((hostel) => hostel.pricePerMonth <= Number(filters.maxPrice));
+    }
+
+    amenityOptions.forEach((amenity) => {
+      if (!filters[amenity.key]) return;
+      filtered = filtered.filter((hostel) => Boolean(hostel.amenities?.[amenity.key]));
+    });
+
+    if (filters.maxDistance && userLocation) {
+      filtered = filtered.filter((hostel) => {
+        const coords = getHostelCoordinates(hostel);
+        if (!coords) return false;
+
+        return getDistanceKm(userLocation, coords) <= Number(filters.maxDistance);
+      });
+    }
+
+    filtered.sort((left, right) => {
+      switch (sortBy) {
+        case 'price_low':
+          return left.pricePerMonth - right.pricePerMonth;
+        case 'price_high':
+          return right.pricePerMonth - left.pricePerMonth;
+        case 'available':
+          return right.availableRooms - left.availableRooms;
+        case 'name':
+          return left.name.localeCompare(right.name);
+        case 'distance': {
+          const leftCoords = getHostelCoordinates(left);
+          const rightCoords = getHostelCoordinates(right);
+
+          if (!userLocation || !leftCoords || !rightCoords) return 0;
+
+          return getDistanceKm(userLocation, leftCoords) - getDistanceKm(userLocation, rightCoords);
+        }
+        case 'rating':
+        default:
+          return right.averageRating - left.averageRating;
+      }
+    });
+
+    return filtered;
+  }, [filters, hostels, searchTerm, sortBy, userLocation]);
+
+  const hasMappableHostels = useMemo(
+    () => filteredHostels.some((hostel) => Boolean(getHostelCoordinates(hostel))),
+    [filteredHostels]
+  );
+
+  const activeFilterCount = useMemo(
+    () =>
+      [
+        filters.hostelType !== 'all',
+        filters.city !== 'all',
+        filters.university !== 'all',
+        filters.minPrice !== '',
+        filters.maxPrice !== '',
+        filters.maxDistance !== '',
+        ...amenityOptions.map((amenity) => filters[amenity.key]),
+      ].filter(Boolean).length,
+    [filters]
+  );
+
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{ label: string; clear: () => void }> = [];
+
+    if (filters.hostelType !== 'all') {
+      chips.push({
+        label: `Type: ${filters.hostelType}`,
+        clear: () => setFilters((prev) => ({ ...prev, hostelType: 'all' })),
+      });
+    }
+
+    if (filters.city !== 'all') {
+      chips.push({
+        label: filters.city,
+        clear: () => setFilters((prev) => ({ ...prev, city: 'all' })),
+      });
+    }
+
+    if (filters.university !== 'all') {
+      chips.push({
+        label: filters.university,
+        clear: () => setFilters((prev) => ({ ...prev, university: 'all' })),
+      });
+    }
+
+    if (filters.minPrice) {
+      chips.push({
+        label: `Min KES ${filters.minPrice}`,
+        clear: () => setFilters((prev) => ({ ...prev, minPrice: '' })),
+      });
+    }
+
+    if (filters.maxPrice) {
+      chips.push({
+        label: `Max KES ${filters.maxPrice}`,
+        clear: () => setFilters((prev) => ({ ...prev, maxPrice: '' })),
+      });
+    }
+
+    if (filters.maxDistance) {
+      chips.push({
+        label: `${filters.maxDistance} km`,
+        clear: () => setFilters((prev) => ({ ...prev, maxDistance: '' })),
+      });
+    }
+
+    amenityOptions.forEach((amenity) => {
+      if (!filters[amenity.key]) return;
+
+      chips.push({
+        label: amenity.label,
+        clear: () => setFilters((prev) => ({ ...prev, [amenity.key]: false })),
+      });
+    });
+
+    return chips;
+  }, [filters]);
+
+  useEffect(() => {
+    if (sortBy === 'distance' && !canSortByDistance) {
+      setSortBy('rating');
+    }
+  }, [canSortByDistance, sortBy]);
+
+  useEffect(() => {
+    if (viewMode === 'map' && !hasMappableHostels) {
+      setViewMode('grid');
+    }
+  }, [hasMappableHostels, viewMode]);
+
+  useEffect(() => {
+    if (filteredHostels.length === 0) {
+      setSelectedMapHostelId(null);
+      return;
+    }
+
+    if (!selectedMapHostelId || !filteredHostels.some((hostel) => hostel._id === selectedMapHostelId)) {
+      setSelectedMapHostelId(filteredHostels[0]._id);
+    }
+  }, [filteredHostels, selectedMapHostelId]);
+
+  async function loadHostels() {
     setLoading(true);
+
     try {
       const data = await api.get<{ hostels: BackendHostel[] }>('/hostels?limit=100');
       const list = data.hostels ?? [];
       setHostels(list);
       dispatch(setHostelList(list));
+      setNearbyMode(false);
     } catch (error) {
       console.error('Error loading hostels:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const loadNearby = () => {
-    if (!navigator.geolocation) return alert('Geolocation is not supported by your browser.');
+  function loadNearby() {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
     setNearbyLoading(true);
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const radiusKm = Number(filters.maxDistance || 10);
+
         try {
-          const { latitude, longitude } = pos.coords;
           const data = await api.get<{ hostels: BackendHostel[] }>(
-            `/hostels/search/proximity?latitude=${latitude}&longitude=${longitude}&radiusKm=10&limit=100`
+            `/hostels/search/proximity?latitude=${latitude}&longitude=${longitude}&radiusKm=${radiusKm}&limit=100`
           );
-          const list = data.hostels ?? [];
-          setHostels(list);
-          dispatch(setHostelList(list));
-        } catch {
+          setHostels(data.hostels ?? []);
+          setUserLocation([latitude, longitude]);
+          setNearbyMode(true);
+          setSortBy('distance');
+        } catch (error) {
+          console.error('Error loading nearby hostels:', error);
           alert('Could not find nearby hostels.');
         } finally {
           setNearbyLoading(false);
         }
       },
-      () => { setNearbyLoading(false); alert('Could not get your location.'); }
+      () => {
+        setNearbyLoading(false);
+        alert('Could not get your location.');
+      }
     );
-  };
+  }
 
-  const applyFilters = () => {
-    let filtered = hostels;
-
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        h => h.name.toLowerCase().includes(q) ||
-             (h.location?.city ?? '').toLowerCase().includes(q) ||
-             (h.location?.address ?? '').toLowerCase().includes(q) ||
-             (h.location?.nearbyUniversity ?? '').toLowerCase().includes(q)
-      );
-    }
-    if (filters.hostelType !== 'all') filtered = filtered.filter(h => h.hostelType === filters.hostelType);
-    if (filters.minPrice) filtered = filtered.filter(h => h.pricePerMonth >= Number(filters.minPrice));
-    if (filters.maxPrice) filtered = filtered.filter(h => h.pricePerMonth <= Number(filters.maxPrice));
-    if (filters.wifi) filtered = filtered.filter(h => h.amenities?.wifi);
-    if (filters.parking) filtered = filtered.filter(h => h.amenities?.parking);
-    if (filters.laundry) filtered = filtered.filter(h => h.amenities?.laundry);
-    if (filters.kitchen) filtered = filtered.filter(h => h.amenities?.kitchen);
-    if (filters.security) filtered = filtered.filter(h => h.amenities?.security);
-
-    setFilteredHostels(filtered);
-  };
-
-  const resetFilters = () => {
-    setFilters({ hostelType: 'all', minPrice: '', maxPrice: '', wifi: false, parking: false, laundry: false, kitchen: false, security: false });
+  function resetFilters() {
+    setFilters(createDefaultFilters());
     setSearchTerm('');
-    loadHostels();
-  };
+    setSortBy('rating');
+    setViewMode('grid');
+    setShowFilters(false);
+    setShowSort(false);
+    setUserLocation(null);
+    void loadHostels();
+  }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Search Hostels</h1>
-          <p className="text-gray-600 mt-1">Find the perfect accommodation for you</p>
+          <h1 className="font-heading text-3xl font-bold text-foreground">Search Hostels</h1>
+          <p className="mt-1 text-muted-foreground">
+            Find the right hostel with richer filters, sorting, nearby discovery, and a map-style view.
+          </p>
+        </div>
+        <Link
+          to="/student/compare"
+          className="inline-flex items-center gap-2 rounded-xl border border-input bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+        >
+          <ArrowRightLeft size={16} />
+          Compare Hostels
+        </Link>
+      </div>
+
+      <div className="mb-6 flex flex-col gap-3 xl:flex-row">
+        <div className="relative flex-1">
+          <Search
+            size={18}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <input
+            type="text"
+            placeholder="Search by name, city, address or university..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            className="w-full rounded-xl border border-input bg-card py-3.5 pl-12 pr-10 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search by name, city or university..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <button
-              onClick={loadNearby}
-              disabled={nearbyLoading}
-              className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
-            >
-              <Navigation size={18} />
-              {nearbyLoading ? 'Locating...' : 'Near Me'}
-            </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium flex items-center justify-center gap-2 transition-colors"
-            >
-              <Filter size={20} />
-              Filters
-            </button>
-          </div>
+        <button
+          type="button"
+          onClick={loadNearby}
+          disabled={nearbyLoading}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+        >
+          <Navigation size={18} />
+          {nearbyLoading ? 'Locating...' : filters.maxDistance ? `Near Me (${filters.maxDistance} km)` : 'Near Me'}
+        </button>
 
-          {showFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button
+          type="button"
+          onClick={() => setShowFilters((prev) => !prev)}
+          className={`inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-3.5 text-sm font-medium transition-all ${
+            showFilters || activeFilterCount > 0
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-input bg-card text-foreground hover:border-primary/30'
+          }`}
+        >
+          <SlidersHorizontal size={18} />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground/20 text-[11px] font-bold">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowSort((prev) => !prev)}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-input bg-card px-5 py-3.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30"
+          >
+            <ArrowUpDown size={18} />
+            <span className="hidden sm:inline">{sortLabels[sortBy]}</span>
+            <span className="sm:hidden">Sort</span>
+          </button>
+
+          <AnimatePresence>
+            {showSort && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setShowSort(false)} />
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="absolute right-0 top-full z-40 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-card"
+                >
+                  {(Object.entries(sortLabels) as Array<[SortOption, string]>).map(([option, label]) => {
+                    const disabled = option === 'distance' && !canSortByDistance;
+
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => {
+                          if (disabled) return;
+                          setSortBy(option);
+                          setShowSort(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                          sortBy === option
+                            ? 'bg-primary/10 font-medium text-primary'
+                            : 'text-foreground hover:bg-secondary'
+                        } ${disabled ? 'cursor-not-allowed opacity-50 hover:bg-transparent' : ''}`}
+                      >
+                        {label}
+                        {disabled ? ' (use Near Me first)' : ''}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="flex overflow-hidden rounded-xl border border-input">
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={`inline-flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium transition-colors ${
+              viewMode === 'grid'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card text-foreground hover:bg-secondary'
+            }`}
+          >
+            <LayoutGrid size={16} />
+            <span className="hidden sm:inline">Grid</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => hasMappableHostels && setViewMode('map')}
+            disabled={!hasMappableHostels}
+            className={`inline-flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium transition-colors ${
+              viewMode === 'map'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card text-foreground hover:bg-secondary'
+            } ${!hasMappableHostels ? 'cursor-not-allowed opacity-50' : ''}`}
+          >
+            <Map size={16} />
+            <span className="hidden sm:inline">Map</span>
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 overflow-hidden"
+          >
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+              <div className="mb-5 flex items-center justify-between">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Hostel Type</label>
+                  <h3 className="font-heading font-bold text-foreground">Filters</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    B-style filters added on top of A&apos;s existing search flow.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {activeFilterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="text-sm font-medium text-destructive hover:underline"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">Hostel Type</label>
                   <select
                     value={filters.hostelType}
-                    onChange={(e) => setFilters({ ...filters, hostelType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(event) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        hostelType: event.target.value as SearchFilters['hostelType'],
+                      }))
+                    }
+                    className="w-full rounded-xl border border-input bg-card px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="all">All</option>
                     <option value="male">Male</option>
@@ -159,134 +818,322 @@ export function SearchHostels() {
                     <option value="mixed">Mixed</option>
                   </select>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Price (KSh)</label>
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.minPrice}
-                    onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <label className="mb-2 block text-sm font-medium text-foreground">County / City</label>
+                  <select
+                    value={filters.city}
+                    onChange={(event) =>
+                      setFilters((prev) => ({ ...prev, city: event.target.value }))
+                    }
+                    className="w-full rounded-xl border border-input bg-card px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="all">All Counties</option>
+                    {cityOptions.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Price (KSh)</label>
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.maxPrice}
-                    onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <label className="mb-2 block text-sm font-medium text-foreground">University</label>
+                  <select
+                    value={filters.university}
+                    onChange={(event) =>
+                      setFilters((prev) => ({ ...prev, university: event.target.value }))
+                    }
+                    className="w-full rounded-xl border border-input bg-card px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="all">All Universities</option>
+                    {universityOptions.map((university) => (
+                      <option key={university} value={university}>
+                        {university}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                    <Navigation size={14} />
+                    Max Distance
+                  </label>
+                  <select
+                    value={filters.maxDistance}
+                    onChange={(event) =>
+                      setFilters((prev) => ({ ...prev, maxDistance: event.target.value }))
+                    }
+                    className="w-full rounded-xl border border-input bg-card px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Any distance</option>
+                    <option value="0.5">Within 0.5 km</option>
+                    <option value="1">Within 1 km</option>
+                    <option value="2">Within 2 km</option>
+                    <option value="5">Within 5 km</option>
+                    <option value="10">Within 10 km</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-foreground">Min Price</label>
+                    <input
+                      type="number"
+                      placeholder="3000"
+                      value={filters.minPrice}
+                      onChange={(event) =>
+                        setFilters((prev) => ({ ...prev, minPrice: event.target.value }))
+                      }
+                      className="w-full rounded-xl border border-input bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-foreground">Max Price</label>
+                    <input
+                      type="number"
+                      placeholder="20000"
+                      value={filters.maxPrice}
+                      onChange={(event) =>
+                        setFilters((prev) => ({ ...prev, maxPrice: event.target.value }))
+                      }
+                      className="w-full rounded-xl border border-input bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Amenities</label>
-                <div className="flex flex-wrap gap-3">
-                  {['wifi', 'parking', 'laundry', 'kitchen', 'security'].map((amenity) => (
-                    <label key={amenity} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={filters[amenity as keyof typeof filters] as boolean}
-                        onChange={(e) => setFilters({ ...filters, [amenity]: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700 capitalize">{amenity}</span>
-                    </label>
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <label className="block text-sm font-medium text-foreground">Amenities</label>
+                  <p className="text-xs text-muted-foreground">
+                    Distance filters work best after using Near Me.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {amenityOptions.map((amenity) => (
+                    <button
+                      key={amenity.key}
+                      type="button"
+                      onClick={() =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          [amenity.key]: !prev[amenity.key],
+                        }))
+                      }
+                      className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${
+                        filters[amenity.key]
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                      }`}
+                    >
+                      {amenity.label}
+                    </button>
                   ))}
                 </div>
               </div>
-
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={resetFilters}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
-                >
-                  Reset Filters
-                </button>
-              </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">{filteredHostels.length}</span> hostel
+            {filteredHostels.length !== 1 ? 's' : ''} found
+          </p>
+          {nearbyMode && (
+            <p className="mt-1 text-xs font-medium text-primary">
+              Nearby mode is active{filters.maxDistance ? ` within ${filters.maxDistance} km` : ''}.
+            </p>
           )}
         </div>
 
-        <div className="text-sm text-gray-600">
-          Found {filteredHostels.length} hostel{filteredHostels.length !== 1 ? 's' : ''}
-        </div>
-
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-        ) : filteredHostels.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-            <Building2 size={48} className="mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-600">No hostels found matching your criteria</p>
-            <button
-              onClick={resetFilters}
-              className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Clear filters
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredHostels.map((hostel) => (
-              <Link
-                key={hostel._id}
-                to={`/student/hostel/${hostel._id}`}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+        {activeFilterChips.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {activeFilterChips.map((chip) => (
+              <span
+                key={chip.label}
+                className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
               >
-                <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white overflow-hidden">
-                  {hostel.images && hostel.images.length > 0
-                    ? <img src={hostel.images[0]} alt={hostel.name} className="w-full h-full object-cover" />
-                    : <Building2 size={64} />}
-                </div>
-                <div className="p-4">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">{hostel.name}</h3>
-                  <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
-                    <MapPin size={16} className="mt-0.5 flex-shrink-0" />
-                    <span className="line-clamp-2">
-                      {hostel.location?.address ?? hostel.location?.city ?? 'Location not set'}
-                    </span>
-                  </div>
-                  {hostel.location?.nearbyUniversity && (
-                    <p className="text-xs text-blue-600 mb-2">Near {hostel.location.nearbyUniversity}</p>
-                  )}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1 text-green-600 font-bold">
-                      <DollarSign size={18} />
-                      <span>KSh {hostel.pricePerMonth.toLocaleString()}/mo</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <Users size={16} />
-                      <span className="text-sm capitalize">{hostel.hostelType}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">{hostel.availableRooms} rooms available</span>
-                    <span className="flex items-center gap-1 text-yellow-600">
-                      <Star size={14} fill="currentColor" />
-                      {hostel.averageRating > 0 ? hostel.averageRating.toFixed(1) : 'New'}
-                    </span>
-                  </div>
-                </div>
-              </Link>
+                {chip.label}
+                <button type="button" onClick={chip.clear}>
+                  <X size={12} />
+                </button>
+              </span>
             ))}
           </div>
         )}
       </div>
-    </DashboardLayout>
-  );
-}
 
-function Building2(props: { size: number; className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={props.size} height={props.size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
-      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
-      <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
-      <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
-      <path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" />
-    </svg>
+      {loading ? (
+        <div className="py-16 text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600" />
+        </div>
+      ) : filteredHostels.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card py-16 text-center shadow-card">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+            <Building2 size={30} className="text-muted-foreground" />
+          </div>
+          <p className="text-foreground">No hostels found matching your criteria</p>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-4 font-medium text-primary hover:underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      ) : viewMode === 'map' ? (
+        <HostelMapView
+          hostels={filteredHostels}
+          userLocation={userLocation}
+          selectedHostelId={selectedMapHostelId}
+          onSelectHostel={setSelectedMapHostelId}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {filteredHostels.map((hostel, index) => {
+            const occupancy =
+              hostel.totalRooms > 0
+                ? Math.round(((hostel.totalRooms - hostel.availableRooms) / hostel.totalRooms) * 100)
+                : 0;
+            const coordinates = getHostelCoordinates(hostel);
+            const distanceKm =
+              userLocation && coordinates ? getDistanceKm(userLocation, coordinates) : null;
+
+            return (
+              <motion.div
+                key={hostel._id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.04 }}
+              >
+                <Link
+                  to={`/student/hostel/${hostel._id}`}
+                  className="group block overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover"
+                >
+                  <div className="relative h-52 overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600">
+                    {hostel.images?.[0] ? (
+                      <img
+                        src={hostel.images[0]}
+                        alt={hostel.name}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                          <span className="font-heading text-xl font-bold text-white">
+                            {hostel.name.charAt(0)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-black/10" />
+                    <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize text-white backdrop-blur-sm ${
+                          hostel.hostelType === 'male'
+                            ? 'bg-sky-500/80'
+                            : hostel.hostelType === 'female'
+                            ? 'bg-pink-500/80'
+                            : 'bg-emerald-500/80'
+                        }`}
+                      >
+                        {hostel.hostelType}
+                      </span>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {distanceKm !== null && (
+                          <span className="rounded-full bg-slate-900/65 px-2.5 py-1 text-xs font-semibold text-white">
+                            {distanceKm.toFixed(1)} km away
+                          </span>
+                        )}
+                        {hostel.availableRooms > 0 && hostel.availableRooms <= 5 && (
+                          <span className="rounded-full bg-red-500/90 px-2.5 py-1 text-xs font-semibold text-white">
+                            Only {hostel.availableRooms} left
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="absolute bottom-3 left-3 rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                      {hostel.averageRating > 0
+                        ? `${hostel.averageRating.toFixed(1)} rating`
+                        : 'New listing'}
+                    </div>
+                  </div>
+
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-heading text-lg font-bold text-card-foreground transition-colors group-hover:text-primary">
+                        {hostel.name}
+                      </h3>
+                      <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                        {sortBy === 'available' ? `${hostel.availableRooms} free` : 'Hostel'}
+                      </span>
+                    </div>
+
+                    <div className="mt-1.5 flex items-center gap-3 text-muted-foreground">
+                      <div className="flex min-w-0 items-center gap-1">
+                        <MapPin size={14} className="shrink-0" />
+                        <span className="truncate text-sm">
+                          {hostel.location?.address ?? hostel.location?.city ?? 'Location not set'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {hostel.location?.nearbyUniversity && (
+                      <p className="mt-2 text-xs font-medium text-primary">
+                        Near {hostel.location.nearbyUniversity}
+                      </p>
+                    )}
+
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {amenityOptions
+                        .filter((amenity) => hostel.amenities?.[amenity.key])
+                        .slice(0, 4)
+                        .map((amenity) => (
+                          <span
+                            key={amenity.key}
+                            className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+                          >
+                            {amenity.label}
+                          </span>
+                        ))}
+                    </div>
+
+                    <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+                      <div>
+                        <span className="font-heading text-2xl font-bold text-primary">
+                          KES {hostel.pricePerMonth.toLocaleString()}
+                        </span>
+                        <span className="text-sm text-muted-foreground">/mo</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Users size={14} />
+                        <span>{occupancy}% occupied</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {hostel.availableRooms} rooms available
+                      </span>
+                      <span className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                        <Star size={14} fill="currentColor" />
+                        {hostel.averageRating > 0 ? hostel.averageRating.toFixed(1) : 'New'}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </DashboardLayout>
   );
 }

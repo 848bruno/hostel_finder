@@ -19,7 +19,7 @@ export function OwnerSettings() {
     try {
       await updateProfile(formData);
       setMessage('Profile updated successfully!');
-    } catch (error) {
+    } catch {
       setMessage('Failed to update profile');
     } finally {
       setSaving(false);
