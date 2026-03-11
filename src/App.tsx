@@ -1,7 +1,8 @@
-import { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode, useEffect } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { applyPortalTheme } from './lib/theme';
 
 import Landing from './pages/Landing';
 import { Login } from './pages/Login';
@@ -123,6 +124,10 @@ function RoleBasedRedirect() {
 }
 
 function App() {
+  useEffect(() => {
+    applyPortalTheme();
+  }, []);
+
   const Router =
     typeof window !== 'undefined' && window.location.protocol === 'file:'
       ? HashRouter

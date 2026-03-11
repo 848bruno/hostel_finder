@@ -1,9 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { Settings, Bell, Shield, Palette, Save } from 'lucide-react';
+import { Settings, Bell, Shield, Palette, Save, Check } from 'lucide-react';
+import { THEME_COLOR_OPTIONS, saveThemeSelection } from '../../lib/theme';
 
 export function AdminSettings() {
   const [activeSection, setActiveSection] = useState('general');
+  const [selectedTheme, setSelectedTheme] = useState('');
+
+  useEffect(() => {
+    setSelectedTheme(localStorage.getItem('shf_theme_primary') || THEME_COLOR_OPTIONS[0].value);
+  }, []);
+
+  const handleThemeChange = (colorValue: string) => {
+    setSelectedTheme(colorValue);
+    saveThemeSelection(colorValue);
+  };
+
   const sections = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -58,8 +70,34 @@ export function AdminSettings() {
             )}
             {activeSection === 'appearance' && (
               <div className="space-y-6">
-                <h2 className="font-heading font-bold text-lg text-foreground">Appearance</h2>
-                <p className="text-sm text-muted-foreground">Theme and branding settings are managed via the theme toggle in the top bar.</p>
+                <h2 className="font-heading font-bold text-lg text-foreground">Global Color Theme</h2>
+                <p className="text-sm text-muted-foreground">Select a primary color to instantly rebrand the platform. This affects buttons, gradients, icons, and charts globally.</p>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {THEME_COLOR_OPTIONS.map((themeOption) => (
+                    <button
+                      key={themeOption.label}
+                      onClick={() => handleThemeChange(themeOption.value)}
+                      className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${
+                        selectedTheme === themeOption.value
+                          ? 'border-primary bg-primary/5 shadow-md scale-105'
+                          : 'border-border bg-card hover:bg-secondary hover:border-primary/30'
+                      }`}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-full mb-3 flex items-center justify-center shadow-inner"
+                        style={{ backgroundColor: themeOption.value }}
+                      >
+                        {selectedTheme === themeOption.value && (
+                          <Check className="text-white drop-shadow-md" size={18} strokeWidth={3} />
+                        )}
+                      </div>
+                      <span className="text-xs font-medium text-foreground text-center">
+                        {themeOption.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             <div className="mt-8 pt-6 border-t border-border flex justify-end">
