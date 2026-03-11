@@ -124,9 +124,14 @@ function RoleBasedRedirect() {
   }
 }
 
-function StudentChatbot() {
+function GlobalChatbot() {
   const location = useLocation();
-  if (!location.pathname.startsWith('/student')) return null;
+  const isPlatformRoute = 
+    location.pathname.startsWith('/student') || 
+    location.pathname.startsWith('/owner') || 
+    location.pathname.startsWith('/admin');
+
+  if (!isPlatformRoute) return null;
   return <Chatbot />;
 }
 
@@ -374,7 +379,7 @@ function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-            <StudentChatbot />
+            <GlobalChatbot />
           </AuthProvider>
         </Router>
       </AppErrorBoundary>
