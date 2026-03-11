@@ -35,7 +35,7 @@ export function SystemHealth() {
             <AreaChart data={uptimeData}>
               <defs><linearGradient id="upGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(142, 71%, 40%)" stopOpacity={0.2} /><stop offset="95%" stopColor="hsl(142, 71%, 40%)" stopOpacity={0} /></linearGradient></defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" /><XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={3} /><YAxis domain={[99, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}%`} />
-              <Tooltip contentStyle={{ borderRadius: '12px' }} formatter={(v: number) => [`${v.toFixed(2)}%`, 'Uptime']} /><Area type="monotone" dataKey="uptime" stroke="hsl(142, 71%, 40%)" fill="url(#upGrad)" strokeWidth={2} />
+              <Tooltip contentStyle={{ borderRadius: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`, 'Uptime']} /><Area type="monotone" dataKey="uptime" stroke="hsl(142, 71%, 40%)" fill="url(#upGrad)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer></div>
         </div>
