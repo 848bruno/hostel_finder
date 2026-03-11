@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode, useEffect } from 'react';
-import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { applyPortalTheme } from './lib/theme';
@@ -58,6 +58,7 @@ import { SupportTickets } from './pages/admin/SupportTickets';
 import { SystemHealth } from './pages/admin/SystemHealth';
 
 import { ProtectedRoute } from './components/ProtectedRoute';
+import Chatbot from './components/Chatbot';
 
 class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
@@ -121,6 +122,12 @@ function RoleBasedRedirect() {
     default:
       return <Navigate to="/login" replace />;
   }
+}
+
+function StudentChatbot() {
+  const location = useLocation();
+  if (!location.pathname.startsWith('/student')) return null;
+  return <Chatbot />;
 }
 
 function App() {
@@ -367,6 +374,7 @@ function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <StudentChatbot />
           </AuthProvider>
         </Router>
       </AppErrorBoundary>
