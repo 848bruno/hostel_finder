@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { api } from '../../lib/api';
+import { api, ApiError } from '../../lib/api';
 import {
   CreditCard, Calendar, DollarSign, FileText,
   RefreshCw, TrendingUp, CheckCircle, Clock,
-  Receipt, Users, Building2,
+  Receipt, Users, Building2, Unlock,
 } from 'lucide-react';
 
 interface OwnerBooking {
@@ -40,6 +40,9 @@ export function OwnerPaymentReport() {
   const [bookings, setBookings] = useState<OwnerBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [actionMessage, setActionMessage] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [releasingBookingId, setReleasingBookingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'pending_payment' | 'cancelled'>('all');
   const [hostelFilter, setHostelFilter] = useState<string>('all');
 
@@ -88,6 +91,27 @@ export function OwnerPaymentReport() {
   const statusLabel = (s: string) =>
     s === 'pending_payment' ? 'Pending Payment' : s.charAt(0).toUpperCase() + s.slice(1);
 
+  const handleReleaseBooking = async (bookingId: string) => {
+    const confirmed = window.confirm('Release this unpaid booking and return the reserved room(s) to availability?');
+    if (!confirmed) {
+      return;
+    }
+
+    setActionMessage('');
+    setActionError('');
+    setReleasingBookingId(bookingId);
+
+    try {
+      const response = await api.post<{ message?: string }>(`/bookings/${bookingId}/release`);
+      setActionMessage(response.message || 'Booking released successfully.');
+      await loadBookings(true);
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : 'Failed to release booking.');
+    } finally {
+      setReleasingBookingId(null);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -106,6 +130,18 @@ export function OwnerPaymentReport() {
             Refresh
           </button>
         </div>
+
+        {actionMessage && (
+          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {actionMessage}
+          </div>
+        )}
+
+        {actionError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {actionError}
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -286,6 +322,17 @@ export function OwnerPaymentReport() {
                         {new Date(booking.payment.paidAt).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     </span>
+                  )}
+                  {booking.status === 'pending_payment' && booking.payment?.status !== 'paid' && (
+                    <button
+                      type="button"
+                      onClick={() => handleReleaseBooking(booking._id)}
+                      disabled={releasingBookingId === booking._id}
+                      className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Unlock size={12} />
+                      {releasingBookingId === booking._id ? 'Releasing...' : 'Release Room'}
+                    </button>
                   )}
                 </div>
               </div>

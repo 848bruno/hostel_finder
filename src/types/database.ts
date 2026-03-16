@@ -7,7 +7,9 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   isApproved?: boolean; // owners only
+  isSuspended?: boolean; // owners only
   phone?: string;
+  verificationStatus?: 'not_submitted' | 'submitted' | 'approved' | 'rejected';
 }
 export type VerificationStatus = 'pending' | 'approved' | 'rejected';
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';

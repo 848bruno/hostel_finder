@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import type { AuthUser } from '../types/database';
 import { PublicLayout } from '../components/layouts/PublicLayout';
 import { LogIn } from 'lucide-react';
 
@@ -17,10 +18,10 @@ declare global {
   }
 }
 
-function redirectByRole(role: string, navigate: (path: string) => void) {
-  if (role === 'student') navigate('/student/dashboard');
-  else if (role === 'owner') navigate('/owner/dashboard');
-  else if (role === 'admin') navigate('/admin/dashboard');
+function redirectByRole(user: AuthUser, navigate: (path: string) => void) {
+  if (user.role === 'student') navigate('/student/dashboard');
+  else if (user.role === 'owner') navigate(user.isApproved ? '/owner/dashboard' : '/owner/verification');
+  else if (user.role === 'admin') navigate('/admin/dashboard');
   else navigate('/');
 }
 
@@ -43,7 +44,7 @@ export function Login() {
       callback: async (response: { credential: string }) => {
         try {
           const user = await googleLogin(response.credential);
-          redirectByRole(user.role, navigate);
+          redirectByRole(user, navigate);
         } catch (err: unknown) {
           setError(err instanceof Error ? err.message : 'Google sign-in failed.');
         }
@@ -66,7 +67,7 @@ export function Login() {
 
     try {
       const user = await signIn(email, password);
-      redirectByRole(user.role, navigate);
+      redirectByRole(user, navigate);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

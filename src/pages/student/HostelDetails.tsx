@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { cacheHostel } from '../../store/hostelSlice';
 import type { RootState, AppDispatch } from '../../store';
 import type { BackendHostel } from '../../store/hostelSlice';
@@ -11,7 +12,7 @@ import {
   Shield, Sparkles, Calendar, ArrowLeft, CreditCard,
   ChevronLeft, ChevronRight, Wind, Utensils, Zap,
   Droplets, GraduationCap, Mail, Building2,
-  CheckCircle, X,
+  CheckCircle, Heart, X,
 } from 'lucide-react';
 
 // ── Photo Gallery ─────────────────────────────────────────────────────────────
@@ -189,12 +190,18 @@ function calcAmount(start: string, end: string, price: number, rooms: number) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export function HostelDetails() {
+interface HostelDetailsProps {
+  previewMode?: boolean;
+}
+
+export function HostelDetails({ previewMode = false }: HostelDetailsProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { user } = useAuth();
   const cachedHostel = useSelector((state: RootState) => id ? state.hostels.byId[id] : undefined);
   const myBookings = useSelector((state: RootState) => state.bookings.list);
+  const isOwnerPreview = previewMode || user?.role === 'owner';
 
   const [hostel, setHostel] = useState<BackendHostel | null>(cachedHostel ?? null);
   const [loading, setLoading] = useState(!cachedHostel);
@@ -207,6 +214,8 @@ export function HostelDetails() {
   });
   const [rateModal, setRateModal] = useState(false);
   const [ratedSuccess, setRatedSuccess] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   const hasConfirmedBooking = myBookings.some(b => b.hostel?._id === id && b.status === 'confirmed');
   const confirmedBooking = myBookings.find(b => b.hostel?._id === id && b.status === 'confirmed');
@@ -218,6 +227,11 @@ export function HostelDetails() {
     else { loadHostel(); }
   }, [id]);
 
+  useEffect(() => {
+    if (!id || isOwnerPreview) return;
+    void loadFavoriteState();
+  }, [id, isOwnerPreview]);
+
   const loadHostel = async () => {
     try {
       const data = await api.get<BackendHostel>(`/hostels/${id}`);
@@ -225,6 +239,15 @@ export function HostelDetails() {
       dispatch(cacheHostel(data));
     } catch { /* handled below */ }
     finally { setLoading(false); }
+  };
+
+  const loadFavoriteState = async () => {
+    try {
+      const favorites = await api.get<Array<{ _id: string }>>('/students/favorites');
+      setIsFavorite((Array.isArray(favorites) ? favorites : []).some((favorite) => favorite._id === id));
+    } catch {
+      setIsFavorite(false);
+    }
   };
 
   const handleBooking = async () => {
@@ -244,6 +267,25 @@ export function HostelDetails() {
   const handleRateSuccess = () => {
     setRateModal(false); setRatedSuccess(true);
     loadHostel(); // refresh ratings
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!hostel) return;
+
+    setFavoriteLoading(true);
+    try {
+      if (isFavorite) {
+        await api.delete(`/students/favorites/${hostel._id}`);
+        setIsFavorite(false);
+      } else {
+        await api.post(`/students/favorites/${hostel._id}`);
+        setIsFavorite(true);
+      }
+    } catch (err) {
+      setBookingError(err instanceof ApiError ? err.message : 'Failed to update favorites.');
+    } finally {
+      setFavoriteLoading(false);
+    }
   };
 
   // When extending, pre-fill startDate from the confirmed booking's endDate
@@ -293,7 +335,7 @@ export function HostelDetails() {
         <button onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-gray-500 hover:text-gray-800 font-medium transition-colors group">
           <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
-          Back to Search
+          {isOwnerPreview ? 'Back to My Hostels' : 'Back to Search'}
         </button>
 
         {/* ── Hero card ── */}
@@ -345,12 +387,29 @@ export function HostelDetails() {
               </div>
 
               {/* Rating badge */}
-              <div className="flex-shrink-0 text-center bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Star size={22} className="text-amber-500" fill="currentColor" />
-                  <span className="text-3xl font-extrabold text-gray-900">{avgRating.toFixed(1)}</span>
+              <div className="flex flex-shrink-0 items-start gap-3">
+                {!isOwnerPreview && (
+                  <button
+                    type="button"
+                    onClick={handleToggleFavorite}
+                    disabled={favoriteLoading}
+                    className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl border transition-colors ${
+                      isFavorite
+                        ? 'border-red-200 bg-red-50 text-red-600'
+                        : 'border-gray-200 bg-white text-gray-500 hover:border-red-200 hover:text-red-600'
+                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                    aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Heart size={20} fill={isFavorite ? 'currentColor' : 'none'} />
+                  </button>
+                )}
+                <div className="text-center bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Star size={22} className="text-amber-500" fill="currentColor" />
+                    <span className="text-3xl font-extrabold text-gray-900">{avgRating.toFixed(1)}</span>
+                  </div>
+                  <p className="text-xs text-gray-500">{hostel.ratings.length} review{hostel.ratings.length !== 1 ? 's' : ''}</p>
                 </div>
-                <p className="text-xs text-gray-500">{hostel.ratings.length} review{hostel.ratings.length !== 1 ? 's' : ''}</p>
               </div>
             </div>
 
@@ -423,7 +482,11 @@ export function HostelDetails() {
             )}
 
             {/* CTA */}
-            {pendingBooking ? (
+            {isOwnerPreview ? (
+              <div className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl text-center font-semibold border border-slate-200">
+                Owner Preview Mode
+              </div>
+            ) : pendingBooking ? (
               <div className="space-y-3">
                 <Link
                   to={`/student/payment/${pendingBooking._id}`}
@@ -462,14 +525,14 @@ export function HostelDetails() {
               <h2 className="text-xl font-bold text-gray-900">Student Reviews</h2>
               <p className="text-sm text-gray-400 mt-0.5">{hostel.ratings.length} review{hostel.ratings.length !== 1 ? 's' : ''}</p>
             </div>
-            {hasConfirmedBooking && !ratedSuccess && (
+            {!isOwnerPreview && hasConfirmedBooking && !ratedSuccess && (
               <button onClick={() => setRateModal(true)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-sm transition-colors shadow-sm">
                 <Star size={15} fill="currentColor" />
                 Write a Review
               </button>
             )}
-            {ratedSuccess && (
+            {!isOwnerPreview && ratedSuccess && (
               <div className="flex items-center gap-2 text-emerald-600 text-sm font-semibold">
                 <CheckCircle size={16} /> Review submitted!
               </div>
@@ -480,7 +543,7 @@ export function HostelDetails() {
             <div className="text-center py-12">
               <Star size={44} className="mx-auto mb-3 text-gray-200" />
               <p className="text-gray-400 text-sm">No reviews yet.</p>
-              {hasConfirmedBooking && !ratedSuccess && (
+              {!isOwnerPreview && hasConfirmedBooking && !ratedSuccess && (
                 <p className="text-gray-500 text-sm mt-1">You've stayed here — share your experience!</p>
               )}
             </div>
@@ -515,7 +578,7 @@ export function HostelDetails() {
       </div>
 
       {/* ── Booking Modal ── */}
-      {bookingModal && (
+      {!isOwnerPreview && bookingModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
@@ -614,7 +677,7 @@ export function HostelDetails() {
       )}
 
       {/* ── Rate Modal ── */}
-      {rateModal && (
+      {!isOwnerPreview && rateModal && (
         <RateModal hostelId={hostel._id} hostelName={hostel.name}
           onClose={() => setRateModal(false)} onSuccess={handleRateSuccess} />
       )}

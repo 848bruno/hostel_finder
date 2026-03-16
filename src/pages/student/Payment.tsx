@@ -4,6 +4,8 @@ import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
 import { CreditCard, Smartphone, Check, RefreshCw } from 'lucide-react';
 
+const PAYMENT_REQUEST_TIMEOUT_MS = 30000;
+
 interface BookingDoc {
   _id: string;
   hostel: { name: string; location?: { address?: string; city?: string } };
@@ -14,6 +16,10 @@ interface BookingDoc {
   payment: { method: 'mpesa' | 'card'; status: string };
   status: string;
 }
+
+const isBookingConfirmed = (booking: BookingDoc | null | undefined) => (
+  booking?.status === 'confirmed' && booking.payment?.status === 'paid'
+);
 
 export function Payment() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -35,10 +41,56 @@ export function Payment() {
     try {
       const data = await api.get<BookingDoc>(`/bookings/${bookingId}`);
       setBooking(data);
+      if (isBookingConfirmed(data)) {
+        navigate(`/student/payment-success/${bookingId}`, { replace: true });
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load booking.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startMpesaPolling = (message?: string) => {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+    }
+
+    setProcessing(false);
+    setStkPending(true);
+    setStkMessage(message || 'Check your phone for the M-Pesa prompt.');
+    setPollCount(0);
+    pollTimerRef.current = setTimeout(() => pollMpesaStatus(0), 3000);
+  };
+
+  const reconcileBookingState = async () => {
+    if (!bookingId) {
+      return { state: 'unknown' as const, booking: null };
+    }
+
+    try {
+      const latestBooking = await api.get<BookingDoc>(`/bookings/${bookingId}`, {
+        timeoutMs: PAYMENT_REQUEST_TIMEOUT_MS,
+      });
+
+      setBooking(latestBooking);
+
+      if (isBookingConfirmed(latestBooking)) {
+        navigate(`/student/payment-success/${bookingId}`, { replace: true });
+        return { state: 'confirmed' as const, booking: latestBooking };
+      }
+
+      if (latestBooking.payment?.status === 'failed') {
+        return { state: 'failed' as const, booking: latestBooking };
+      }
+
+      if (latestBooking.payment?.method === 'mpesa' && latestBooking.payment?.status === 'pending') {
+        return { state: 'pending' as const, booking: latestBooking };
+      }
+
+      return { state: 'unknown' as const, booking: latestBooking };
+    } catch {
+      return { state: 'unknown' as const, booking: null };
     }
   };
 
@@ -47,10 +99,12 @@ export function Payment() {
 
   const pollMpesaStatus = async (count: number) => {
     if (count > 40) {
-      // ~2 minutes of polling (40 × 3s)
-      setStkPending(false);
-      setProcessing(false);
-      setError('Payment confirmation timed out. If you entered your PIN, please wait a moment and refresh your bookings page.');
+      const reconciled = await reconcileBookingState();
+      if (reconciled.state !== 'confirmed') {
+        setStkPending(false);
+        setProcessing(false);
+        setError('Payment confirmation is taking longer than expected. Refresh My Bookings in a moment before retrying.');
+      }
       return;
     }
     try {
@@ -59,16 +113,19 @@ export function Payment() {
         pending?: boolean;
         failed?: boolean;
         message?: string;
-      }>(`/bookings/${bookingId}/verify-mpesa`, {});
+      }>(`/bookings/${bookingId}/verify-mpesa`, {}, { timeoutMs: PAYMENT_REQUEST_TIMEOUT_MS });
 
       if (result.confirmed) {
         navigate(`/student/payment-success/${bookingId}`);
         return;
       }
       if (result.failed) {
-        setStkPending(false);
-        setProcessing(false);
-        setError(result.message || 'Payment failed. Please try again.');
+        const reconciled = await reconcileBookingState();
+        if (reconciled.state !== 'confirmed') {
+          setStkPending(false);
+          setProcessing(false);
+          setError(result.message || 'Payment failed. Please try again.');
+        }
         return;
       }
       // Still pending — schedule next poll
@@ -90,13 +147,10 @@ export function Payment() {
           stkPending?: boolean;
           message?: string;
           confirmed?: boolean;
-        }>(`/bookings/${bookingId}/confirm-payment`, { phone: mpesaPhone });
+        }>(`/bookings/${bookingId}/confirm-payment`, { phone: mpesaPhone }, { timeoutMs: PAYMENT_REQUEST_TIMEOUT_MS });
 
         if (result.stkPending) {
-          setStkPending(true);
-          setStkMessage(result.message || 'Check your phone for the M-Pesa prompt.');
-          setPollCount(0);
-          pollTimerRef.current = setTimeout(() => pollMpesaStatus(0), 3000);
+          startMpesaPolling(result.message);
           return;
         }
         // Immediately confirmed (shouldn't happen for mpesa but handle gracefully)
@@ -104,11 +158,25 @@ export function Payment() {
       } else {
         await api.post(`/bookings/${bookingId}/confirm-payment`, {
           paymentReference: `CARD-${Date.now()}`,
-        });
+        }, { timeoutMs: PAYMENT_REQUEST_TIMEOUT_MS });
         navigate(`/student/payment-success/${bookingId}`);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Payment failed. Please try again.');
+      const apiError = err instanceof ApiError ? err : null;
+
+      if (booking.payment.method === 'mpesa') {
+        const reconciled = await reconcileBookingState();
+        if (reconciled.state === 'confirmed') {
+          return;
+        }
+
+        if (reconciled.state === 'pending') {
+          startMpesaPolling('M-Pesa prompt may already have been sent. Complete the payment on your phone.');
+          return;
+        }
+      }
+
+      setError(apiError ? apiError.message : 'Payment failed. Please try again.');
       setProcessing(false);
     }
   };

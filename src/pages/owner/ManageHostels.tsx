@@ -167,7 +167,7 @@ export function ManageHostels() {
                         </div>
                         <div className="flex gap-2 shrink-0">
                           <button
-                            onClick={() => navigate(`/student/hostel/${hostel._id}`)}
+                            onClick={() => navigate(`/owner/hostels/preview/${hostel._id}`)}
                             className="p-2.5 rounded-xl border border-input hover:bg-secondary transition-colors"
                             title="Preview"
                           >

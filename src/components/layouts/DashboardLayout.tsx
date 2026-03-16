@@ -1,8 +1,9 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { useAuth } from '../../contexts/AuthContext';
+import { api } from '../../lib/api';
 import {
   LayoutDashboard, Search, BookOpen, Settings, LogOut, Building2,
   Users, BarChart3, ShieldCheck, Menu, X, ChevronRight,
@@ -76,6 +77,18 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
+interface AnnouncementNotification {
+  _id: string;
+  title: string;
+  message: string;
+  audience?: 'all' | 'students' | 'owners';
+  status?: 'draft' | 'sent';
+  publishedAt?: string;
+  createdAt?: string;
+  isRead?: boolean;
+  readAt?: string | null;
+}
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { profile, signOut, updateProfile } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -84,10 +97,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [refreshing, setRefreshing] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState<AnnouncementNotification[]>([]);
+  const [selectedNotification, setSelectedNotification] = useState<AnnouncementNotification | null>(null);
 
   const role = (profile?.role as UserRole) || 'student';
   const userName = profile?.username || 'User';
   const navItems = navMap[role] || studentNav;
+  const ownerNeedsVerification = profile?.role === 'owner' && profile.isApproved === false;
+  const isOwnerVerificationRoute = location.pathname === '/owner/verification';
 
   // Build breadcrumb from path
   const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -95,6 +113,71 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     label: seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '),
     path: '/' + pathSegments.slice(0, i + 1).join('/'),
   }));
+
+  useEffect(() => {
+    if (!profile) {
+      setNotifications([]);
+      return;
+    }
+
+    const loadNotifications = async () => {
+      try {
+        if (profile.role === 'student') {
+          const data = await api.get<{ announcements: AnnouncementNotification[] }>('/students/announcements');
+          setNotifications((data.announcements ?? []).slice(0, 5));
+          return;
+        }
+
+        if (profile.role === 'owner') {
+          const data = await api.get<{ announcements: AnnouncementNotification[] }>('/owners/announcements');
+          setNotifications((data.announcements ?? []).slice(0, 5));
+          return;
+        }
+
+        if (profile.role === 'admin') {
+          const data = await api.get<{ announcements: AnnouncementNotification[] }>('/admin/announcements');
+          const published = (data.announcements ?? []).filter((announcement) => announcement.status === 'sent');
+          setNotifications(published.slice(0, 5));
+          return;
+        }
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+        setNotifications([]);
+      }
+    };
+
+    void loadNotifications();
+  }, [profile]);
+
+  const unreadCount = notifications.filter((notification) => !notification.isRead).length;
+
+  const truncateNotificationMessage = (message: string) => (
+    message.length > 88 ? `${message.slice(0, 88)}...` : message
+  );
+
+  const markNotificationRead = async (notification: AnnouncementNotification) => {
+    if (!profile || profile.role === 'admin' || notification.isRead) {
+      return;
+    }
+
+    try {
+      const basePath = profile.role === 'student' ? '/students/announcements' : '/owners/announcements';
+      await api.post(`${basePath}/${notification._id}/read`);
+      setNotifications((current) => current.map((item) => (
+        item._id === notification._id
+          ? { ...item, isRead: true, readAt: new Date().toISOString() }
+          : item
+      )));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const openNotification = async (notification: AnnouncementNotification) => {
+    setNotificationOpen(false);
+    setSelectedNotification(notification);
+    await markNotificationRead(notification);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -106,25 +189,43 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   // Pending-approval gate for owners
-  if (profile?.role === 'owner' && profile.isApproved === false) {
+  if (ownerNeedsVerification && !isOwnerVerificationRoute) {
     const handleRefresh = async () => {
       setRefreshing(true);
       try { await updateProfile({}); } finally { setRefreshing(false); }
     };
+
+    const statusLabel = profile.verificationStatus === 'submitted'
+      ? 'Verification submitted'
+      : profile.verificationStatus === 'rejected'
+      ? 'Verification rejected'
+      : 'Verification required';
+    const statusMessage = profile.verificationStatus === 'submitted'
+      ? 'Your verification is under review. You can reopen the verification page to check the submitted details.'
+      : profile.verificationStatus === 'rejected'
+      ? 'Your verification was rejected. Open the verification page, review the rejection reason, and resubmit.'
+      : 'Complete owner verification before you can use the rest of the owner portal.';
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="bg-card rounded-2xl shadow-card border border-border p-8 max-w-md w-full text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-warning/10 rounded-full mb-4">
             <Clock size={32} className="text-warning" />
           </div>
-          <h1 className="text-2xl font-heading font-bold text-foreground mb-2">Awaiting Admin Approval</h1>
+          <h1 className="text-2xl font-heading font-bold text-foreground mb-2">{statusLabel}</h1>
           <p className="text-muted-foreground mb-2">
-            Your owner account is under review. You'll receive an email once it's approved.
+            {statusMessage}
           </p>
           <p className="text-sm text-muted-foreground/60 mb-6">
             Logged in as <span className="font-medium text-foreground">{profile.username}</span>
           </p>
           <div className="flex flex-col gap-3">
+            <button
+              onClick={() => navigate('/owner/verification')}
+              className="w-full flex items-center justify-center gap-2 py-2.5 gradient-hero text-primary-foreground rounded-xl font-semibold transition-opacity hover:opacity-90"
+            >
+              <FileCheck size={16} /> Open Verification
+            </button>
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -305,9 +406,81 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
               {/* Notification bell */}
               <div className="relative">
-                <button className="p-2.5 rounded-xl hover:bg-secondary transition-colors relative">
+                <button
+                  onClick={() => setNotificationOpen((current) => !current)}
+                  className="p-2.5 rounded-xl hover:bg-secondary transition-colors relative"
+                >
                   <Bell size={20} className="text-muted-foreground" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </button>
+
+                <AnimatePresence>
+                  {notificationOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setNotificationOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="absolute right-0 top-full z-40 mt-2 w-[320px] overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+                      >
+                        <div className="border-b border-border px-4 py-3">
+                          <h3 className="font-heading text-sm font-bold text-foreground">Notifications</h3>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {notifications.length > 0 ? `${unreadCount} unread announcement${unreadCount === 1 ? '' : 's'}` : 'No new notifications'}
+                          </p>
+                        </div>
+                        {notifications.length === 0 ? (
+                          <div className="px-4 py-6 text-sm text-muted-foreground">
+                            No announcements available right now.
+                          </div>
+                        ) : (
+                          <div className="max-h-[360px] overflow-y-auto">
+                            {notifications.map((notification) => (
+                              <div key={notification._id} className="border-b border-border px-4 py-3 last:border-b-0">
+                                <div className="flex items-start gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => void openNotification(notification)}
+                                    className="min-w-0 flex-1 text-left"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <p className={`text-sm font-semibold ${notification.isRead ? 'text-foreground' : 'text-primary'}`}>
+                                        {notification.title}
+                                      </p>
+                                      {!notification.isRead && (
+                                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
+                                      )}
+                                    </div>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      {truncateNotificationMessage(notification.message)}
+                                    </p>
+                                    <p className="mt-2 text-[11px] text-muted-foreground/80">
+                                      {new Date(notification.publishedAt || notification.createdAt || Date.now()).toLocaleDateString()}
+                                    </p>
+                                  </button>
+                                  {!notification.isRead && profile?.role !== 'admin' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void markNotificationRead(notification)}
+                                      className="shrink-0 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-secondary"
+                                    >
+                                      Mark read
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* User avatar - mobile */}
@@ -332,6 +505,45 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </motion.div>
         </main>
       </div>
+
+      <AnimatePresence>
+        {selectedNotification && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+              onClick={() => setSelectedNotification(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-border p-6">
+                <div>
+                  <h3 className="font-heading text-xl font-bold text-foreground">{selectedNotification.title}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {new Date(selectedNotification.publishedAt || selectedNotification.createdAt || Date.now()).toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedNotification(null)}
+                  className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-6">
+                <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{selectedNotification.message}</p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

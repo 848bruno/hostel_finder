@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { api } from '../../lib/api';
+import { api, ApiError } from '../../lib/api';
 import { setBookings } from '../../store/bookingSlice';
 import type { BookingItem } from '../../store/bookingSlice';
 import type { RootState, AppDispatch } from '../../store';
@@ -14,6 +14,9 @@ export function MyBookings() {
   const [bookings, setLocalBookings] = useState<BookingItem[]>(cachedBookings);
   const [loading, setLoading] = useState(!loaded);
   const [refreshing, setRefreshing] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending_payment' | 'confirmed' | 'cancelled'>('all');
 
   useEffect(() => {
@@ -37,6 +40,27 @@ export function MyBookings() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    const confirmed = window.confirm('Cancel this unpaid booking and release the reserved room?');
+    if (!confirmed) {
+      return;
+    }
+
+    setActionError('');
+    setActionMessage('');
+    setCancellingBookingId(bookingId);
+
+    try {
+      const response = await api.post<{ message?: string }>(`/bookings/${bookingId}/cancel`);
+      setActionMessage(response.message || 'Booking cancelled successfully.');
+      await loadBookings(true);
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : 'Failed to cancel booking.');
+    } finally {
+      setCancellingBookingId(null);
     }
   };
 
@@ -91,6 +115,18 @@ export function MyBookings() {
             </button>
           ))}
         </div>
+
+        {actionMessage && (
+          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {actionMessage}
+          </div>
+        )}
+
+        {actionError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {actionError}
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-12">
@@ -176,6 +212,16 @@ export function MyBookings() {
                       <FileText size={16} />
                       View Details
                     </Link>
+                  )}
+                  {booking.status === 'pending_payment' && booking.payment?.status !== 'paid' && (
+                    <button
+                      type="button"
+                      onClick={() => handleCancelBooking(booking._id)}
+                      disabled={cancellingBookingId === booking._id}
+                      className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {cancellingBookingId === booking._id ? 'Cancelling...' : 'Cancel Booking'}
+                    </button>
                   )}
                 </div>
               </div>

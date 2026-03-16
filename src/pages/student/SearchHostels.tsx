@@ -5,6 +5,7 @@ import {
   ArrowRightLeft,
   ArrowUpDown,
   Building2,
+  Heart,
   LayoutGrid,
   Map,
   MapPin,
@@ -341,6 +342,8 @@ export function SearchHostels() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [nearbyMode, setNearbyMode] = useState(false);
   const [selectedMapHostelId, setSelectedMapHostelId] = useState<string | null>(null);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoriteBusyId, setFavoriteBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (listLoaded) {
@@ -351,6 +354,10 @@ export function SearchHostels() {
 
     void loadHostels();
   }, [cachedHostels, listLoaded]);
+
+  useEffect(() => {
+    void loadFavorites();
+  }, []);
 
   const cityOptions = useMemo(
     () =>
@@ -565,6 +572,38 @@ export function SearchHostels() {
       console.error('Error loading hostels:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadFavorites() {
+    try {
+      const data = await api.get<Array<{ _id: string }>>('/students/favorites');
+      setFavoriteIds(new Set((Array.isArray(data) ? data : []).map((hostel) => hostel._id)));
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  }
+
+  async function toggleFavorite(hostelId: string) {
+    const isFavorite = favoriteIds.has(hostelId);
+    setFavoriteBusyId(hostelId);
+
+    try {
+      if (isFavorite) {
+        await api.delete(`/students/favorites/${hostelId}`);
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          next.delete(hostelId);
+          return next;
+        });
+      } else {
+        await api.post(`/students/favorites/${hostelId}`);
+        setFavoriteIds((prev) => new Set(prev).add(hostelId));
+      }
+    } catch (error) {
+      console.error('Error updating favorite:', error);
+    } finally {
+      setFavoriteBusyId(null);
     }
   }
 
@@ -1003,6 +1042,7 @@ export function SearchHostels() {
             const coordinates = getHostelCoordinates(hostel);
             const distanceKm =
               userLocation && coordinates ? getDistanceKm(userLocation, coordinates) : null;
+            const isFavorite = favoriteIds.has(hostel._id);
 
             return (
               <motion.div
@@ -1045,7 +1085,24 @@ export function SearchHostels() {
                       >
                         {hostel.hostelType}
                       </span>
-                      <div className="flex flex-wrap justify-end gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            void toggleFavorite(hostel._id);
+                          }}
+                          disabled={favoriteBusyId === hostel._id}
+                          className={`inline-flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm transition-colors ${
+                            isFavorite
+                              ? 'bg-red-500/90 text-white'
+                              : 'bg-white/85 text-slate-700 hover:bg-white'
+                          } disabled:cursor-not-allowed disabled:opacity-60`}
+                          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
+                        </button>
                         {distanceKm !== null && (
                           <span className="rounded-full bg-slate-900/65 px-2.5 py-1 text-xs font-semibold text-white">
                             {distanceKm.toFixed(1)} km away

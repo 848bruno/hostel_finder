@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { api } from '../../lib/api';
+import { api, ApiError } from '../../lib/api';
 import { setBookings } from '../../store/bookingSlice';
 import type { BookingItem } from '../../store/bookingSlice';
 import type { RootState, AppDispatch } from '../../store';
@@ -17,6 +17,9 @@ export function StudentPaymentReport() {
   const [bookings, setLocalBookings] = useState<BookingItem[]>(cachedBookings);
   const [loading, setLoading] = useState(!loaded);
   const [refreshing, setRefreshing] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'pending_payment' | 'cancelled'>('all');
 
   useEffect(() => {
@@ -43,7 +46,28 @@ export function StudentPaymentReport() {
     }
   };
 
-  const confirmed = bookings.filter(b => b.status === 'confirmed');
+  const handleCancelBooking = async (bookingId: string) => {
+    const confirmed = window.confirm('Cancel this unpaid booking and release the reserved room?');
+    if (!confirmed) {
+      return;
+    }
+
+    setActionError('');
+    setActionMessage('');
+    setCancellingBookingId(bookingId);
+
+    try {
+      const response = await api.post<{ message?: string }>(`/bookings/${bookingId}/cancel`);
+      setActionMessage(response.message || 'Booking cancelled successfully.');
+      await loadBookings(true);
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : 'Failed to cancel booking.');
+    } finally {
+      setCancellingBookingId(null);
+    }
+  };
+
+  const confirmed = bookings.filter(b => b.status === 'confirmed' && b.payment?.status === 'paid');
   const pending = bookings.filter(b => b.status === 'pending_payment');
   const totalSpent = confirmed.reduce((sum, b) => sum + Number(b.amount ?? 0), 0);
 
@@ -131,6 +155,18 @@ export function StudentPaymentReport() {
             </button>
           ))}
         </div>
+
+        {actionMessage && (
+          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {actionMessage}
+          </div>
+        )}
+
+        {actionError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {actionError}
+          </div>
+        )}
 
         {/* Table / Cards */}
         {loading ? (
@@ -242,6 +278,16 @@ export function StudentPaymentReport() {
                     >
                       Complete Payment →
                     </Link>
+                  )}
+                  {booking.status === 'pending_payment' && booking.payment?.status !== 'paid' && booking._id && (
+                    <button
+                      type="button"
+                      onClick={() => handleCancelBooking(booking._id)}
+                      disabled={cancellingBookingId === booking._id}
+                      className="text-sm font-medium text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {cancellingBookingId === booking._id ? 'Cancelling...' : 'Cancel Booking →'}
+                    </button>
                   )}
                 </div>
               </div>

@@ -1,6 +1,10 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5100/api';
 const REQUEST_TIMEOUT_MS = 8000;
 
+interface RequestOptions {
+  timeoutMs?: number;
+}
+
 const TOKEN_KEY = 'shf_token';
 
 export function getToken(): string | null {
@@ -26,11 +30,13 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
-  isFormData = false
+  isFormData = false,
+  options: RequestOptions = {}
 ): Promise<T> {
   const headers: Record<string, string> = {};
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   const token = getToken();
   if (token) {
@@ -77,10 +83,10 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>('GET', path),
-  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
-  postForm: <T>(path: string, body: FormData) =>
-    request<T>('POST', path, body, true),
-  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
-  delete: <T>(path: string) => request<T>('DELETE', path),
+  get: <T>(path: string, options?: RequestOptions) => request<T>('GET', path, undefined, false, options),
+  post: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('POST', path, body, false, options),
+  postForm: <T>(path: string, body: FormData, options?: RequestOptions) =>
+    request<T>('POST', path, body, true, options),
+  put: <T>(path: string, body?: unknown, options?: RequestOptions) => request<T>('PUT', path, body, false, options),
+  delete: <T>(path: string, options?: RequestOptions) => request<T>('DELETE', path, undefined, false, options),
 };

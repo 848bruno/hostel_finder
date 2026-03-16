@@ -91,9 +91,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.user;
   };
 
-  // Stub - settings pages can be migrated separately
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const updateProfile = async (_updates: Partial<AuthUser>): Promise<void> => {
+  const updateProfile = async (updates: Partial<AuthUser>): Promise<void> => {
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    if (Object.keys(updates).length === 0) {
+      const refreshed = await api.get<AuthUser>('/auth/profile');
+      setUser(refreshed);
+      return;
+    }
+
+    if (user.role === 'admin') {
+      const refreshed = await api.get<AuthUser>('/auth/profile');
+      setUser(refreshed);
+      return;
+    }
+
+    const path = user.role === 'owner' ? '/owners/profile' : '/students/profile';
+    await api.put(path, updates);
     const refreshed = await api.get<AuthUser>('/auth/profile');
     setUser(refreshed);
   };

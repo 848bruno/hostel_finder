@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { User, Lock, Bell, HelpCircle } from 'lucide-react';
@@ -12,6 +12,13 @@ export function StudentSettings() {
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    setFormData({
+      username: profile?.username || '',
+      phone: profile?.phone || '',
+    });
+  }, [profile?.username, profile?.phone]);
 
   const handleSaveProfile = async () => {
     setSaving(true);

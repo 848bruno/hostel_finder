@@ -1,119 +1,266 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { motion } from 'framer-motion';
-import { FileText, Plus, Calendar, CheckCircle2, Clock, AlertTriangle, Search } from 'lucide-react';
+import { ApiError, api } from '../../lib/api';
+import { AlertTriangle, Calendar, CheckCircle2, Clock, FileText, Plus, Search } from 'lucide-react';
 
-// TODO: Replace with real API data when backend supports lease management
-interface Lease {
-  id: string; tenant: string; hostel: string; room: string;
-  startDate: string; endDate: string; monthlyRent: number;
-  status: 'active' | 'expiring' | 'expired'; daysRemaining: number;
+type LeaseStatus = 'active' | 'expiring' | 'expired' | 'archived';
+
+interface HostelOption {
+  _id: string;
+  name: string;
 }
 
-const mockLeases: Lease[] = [
-  { id: 'L001', tenant: 'Brian Ochieng', hostel: 'KU Gate Hostel', room: 'Room 12A', startDate: '2024-09-01', endDate: '2025-06-30', monthlyRent: 12000, status: 'active', daysRemaining: 120 },
-  { id: 'L002', tenant: 'Faith Wanjiku', hostel: 'Thika Road Apartments', room: 'Room 5B', startDate: '2024-09-01', endDate: '2025-03-30', monthlyRent: 8500, status: 'expiring', daysRemaining: 18 },
-  { id: 'L003', tenant: 'Kevin Mutua', hostel: 'KU Gate Hostel', room: 'Room 8C', startDate: '2024-01-01', endDate: '2025-01-31', monthlyRent: 10000, status: 'expired', daysRemaining: 0 },
-  { id: 'L004', tenant: 'Mercy Akinyi', hostel: 'Riverside Studios', room: 'Room 3A', startDate: '2024-09-01', endDate: '2025-08-31', monthlyRent: 15000, status: 'active', daysRemaining: 180 },
-];
+interface Lease {
+  _id: string;
+  tenantName: string;
+  tenantEmail?: string;
+  roomLabel?: string;
+  startDate: string;
+  endDate: string;
+  monthlyRent: number;
+  status: LeaseStatus;
+  daysRemaining: number;
+  hostel?: { _id: string; name: string };
+}
 
-const statusConfig = {
+interface LeaseResponse {
+  leases: Lease[];
+  stats: {
+    active: number;
+    expiring: number;
+    expired: number;
+    monthlyRevenue: number;
+  };
+}
+
+const statusConfig: Record<LeaseStatus, { color: string; bg: string; icon: React.ReactNode }> = {
   active: { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', icon: <CheckCircle2 size={14} /> },
   expiring: { color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/30', icon: <Clock size={14} /> },
   expired: { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30', icon: <AlertTriangle size={14} /> },
+  archived: { color: 'text-muted-foreground', bg: 'bg-muted', icon: <FileText size={14} /> },
 };
 
-export function LeaseManagement() {
-  const [filter, setFilter] = useState<'all' | 'active' | 'expiring' | 'expired'>('all');
-  const [search, setSearch] = useState('');
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString();
+}
 
-  const filtered = mockLeases
-    .filter(l => filter === 'all' || l.status === filter)
-    .filter(l => l.tenant.toLowerCase().includes(search.toLowerCase()) || l.hostel.toLowerCase().includes(search.toLowerCase()));
+export function LeaseManagement() {
+  const [leases, setLeases] = useState<Lease[]>([]);
+  const [hostels, setHostels] = useState<HostelOption[]>([]);
+  const [stats, setStats] = useState<LeaseResponse['stats']>({ active: 0, expiring: 0, expired: 0, monthlyRevenue: 0 });
+  const [filter, setFilter] = useState<'all' | LeaseStatus>('all');
+  const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    hostelId: '',
+    tenantName: '',
+    tenantEmail: '',
+    roomLabel: '',
+    startDate: '',
+    endDate: '',
+    monthlyRent: '',
+  });
+
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [leaseData, hostelData] = await Promise.all([
+        api.get<LeaseResponse>('/owners/leases'),
+        api.get<{ hostels: HostelOption[] }>('/owners/hostels'),
+      ]);
+      setLeases(leaseData.leases);
+      setStats(leaseData.stats);
+      setHostels(hostelData.hostels || []);
+      setForm((current) => ({ ...current, hostelId: current.hostelId || hostelData.hostels?.[0]?._id || '' }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load leases.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const filtered = useMemo(() => leases
+    .filter((lease) => filter === 'all' || lease.status === filter)
+    .filter((lease) => {
+      if (!search) return true;
+      const target = `${lease.tenantName} ${lease.hostel?.name || ''} ${lease.roomLabel || ''}`.toLowerCase();
+      return target.includes(search.toLowerCase());
+    }), [filter, leases, search]);
+
+  const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      await api.post('/owners/leases', {
+        ...form,
+        monthlyRent: Number(form.monthlyRent),
+      });
+      setShowForm(false);
+      setForm({
+        hostelId: hostels[0]?._id || '',
+        tenantName: '',
+        tenantEmail: '',
+        roomLabel: '',
+        startDate: '',
+        endDate: '',
+        monthlyRent: '',
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create lease.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRenew = async (lease: Lease) => {
+    const nextEndDate = window.prompt('Enter new end date (YYYY-MM-DD):', lease.endDate.slice(0, 10));
+    if (!nextEndDate) return;
+    try {
+      await api.put(`/owners/leases/${lease._id}`, { endDate: nextEndDate });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to renew lease.');
+    }
+  };
+
+  const handleArchive = async (lease: Lease) => {
+    try {
+      await api.put(`/owners/leases/${lease._id}`, { action: 'archive' });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to archive lease.');
+    }
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-heading font-bold text-foreground">Lease Management</h1>
-            <p className="text-muted-foreground text-sm mt-1">Track and manage tenant lease agreements</p>
+            <p className="mt-1 text-sm text-muted-foreground">Track and manage tenant lease agreements.</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90">
-            <Plus size={18} /> New Lease
+          <button onClick={() => setShowForm((current) => !current)} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
+            <Plus size={18} />
+            {showForm ? 'Hide Form' : 'New Lease'}
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
+        {showForm && (
+          <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-card p-5 shadow-card md:grid-cols-2">
+            <select value={form.hostelId} onChange={(event) => setForm((current) => ({ ...current, hostelId: event.target.value }))} className="rounded-xl border border-input bg-background px-4 py-3 text-sm">
+              {hostels.map((hostel) => <option key={hostel._id} value={hostel._id}>{hostel.name}</option>)}
+            </select>
+            <input value={form.tenantName} onChange={(event) => setForm((current) => ({ ...current, tenantName: event.target.value }))} placeholder="Tenant name" className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <input value={form.tenantEmail} onChange={(event) => setForm((current) => ({ ...current, tenantEmail: event.target.value }))} placeholder="Tenant email" className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <input value={form.roomLabel} onChange={(event) => setForm((current) => ({ ...current, roomLabel: event.target.value }))} placeholder="Room label" className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <input type="date" value={form.startDate} onChange={(event) => setForm((current) => ({ ...current, startDate: event.target.value }))} className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <input type="date" value={form.endDate} onChange={(event) => setForm((current) => ({ ...current, endDate: event.target.value }))} className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <input type="number" min="0" value={form.monthlyRent} onChange={(event) => setForm((current) => ({ ...current, monthlyRent: event.target.value }))} placeholder="Monthly rent" className="rounded-xl border border-input bg-background px-4 py-3 text-sm md:col-span-2" />
+            <button disabled={saving || hostels.length === 0} className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60 md:col-span-2">
+              {saving ? 'Saving...' : 'Create Lease'}
+            </button>
+          </form>
+        )}
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            { label: 'Active', value: mockLeases.filter(l => l.status === 'active').length, color: 'text-green-600 dark:text-green-400' },
-            { label: 'Expiring Soon', value: mockLeases.filter(l => l.status === 'expiring').length, color: 'text-yellow-600 dark:text-yellow-400' },
-            { label: 'Expired', value: mockLeases.filter(l => l.status === 'expired').length, color: 'text-red-600 dark:text-red-400' },
-            { label: 'Total Revenue', value: `KES ${mockLeases.reduce((s, l) => s + l.monthlyRent, 0).toLocaleString()}/mo`, color: 'text-primary' },
-          ].map(s => (
-            <div key={s.label} className="p-4 rounded-xl bg-card border border-border">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+            { label: 'Active', value: stats.active, color: 'text-green-600 dark:text-green-400' },
+            { label: 'Expiring Soon', value: stats.expiring, color: 'text-yellow-600 dark:text-yellow-400' },
+            { label: 'Expired', value: stats.expired, color: 'text-red-600 dark:text-red-400' },
+            { label: 'Total Revenue', value: `KES ${stats.monthlyRevenue.toLocaleString()}/mo`, color: 'text-primary' },
+          ].map((item) => (
+            <div key={item.label} className="rounded-xl border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">{item.label}</p>
+              <p className={`mt-1 text-xl font-bold ${item.color}`}>{item.value}</p>
             </div>
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tenants..." className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tenants..." className="w-full rounded-xl border border-border bg-card py-2.5 pl-9 pr-4 text-sm" />
           </div>
-          <div className="flex gap-1 bg-muted p-1 rounded-xl">
-            {(['all', 'active', 'expiring', 'expired'] as const).map(f => (
-              <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
+          <div className="flex gap-1 rounded-xl bg-muted p-1">
+            {(['all', 'active', 'expiring', 'expired', 'archived'] as const).map((value) => (
+              <button key={value} onClick={() => setFilter(value)} className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${filter === value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                {value.charAt(0).toUpperCase() + value.slice(1).replace('_', ' ')}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl shadow-card border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead><tr className="border-b border-border bg-secondary/30">
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tenant</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Property</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Duration</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rent</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="text-left p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
-              </tr></thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((lease, i) => {
-                  const cfg = statusConfig[lease.status];
-                  return (
-                    <motion.tr key={lease.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="hover:bg-secondary/50 transition-colors">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center text-primary-foreground text-xs font-bold">{lease.tenant.charAt(0)}</div>
-                          <span className="text-sm font-medium text-foreground">{lease.tenant}</span>
-                        </div>
-                      </td>
-                      <td className="p-4"><p className="text-sm text-foreground">{lease.hostel}</p><p className="text-xs text-muted-foreground">{lease.room}</p></td>
-                      <td className="p-4"><div className="flex items-center gap-1.5 text-sm text-muted-foreground"><Calendar size={13} />{lease.startDate} - {lease.endDate}</div></td>
-                      <td className="p-4 text-sm font-semibold text-foreground">KES {lease.monthlyRent.toLocaleString()}/mo</td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.color}`}>
-                          {cfg.icon} {lease.status.charAt(0).toUpperCase() + lease.status.slice(1)}
-                          {lease.status === 'expiring' && ` (${lease.daysRemaining}d)`}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        {lease.status === 'expiring' && <button className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90">Renew</button>}
-                        {lease.status === 'expired' && <button className="px-3 py-1.5 rounded-lg border border-input text-foreground text-xs font-medium hover:bg-secondary">Archive</button>}
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {filtered.length === 0 && <div className="py-16 text-center"><FileText size={40} className="text-muted-foreground mx-auto mb-3" /><p className="text-muted-foreground">No leases found</p></div>}
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+          {loading ? (
+            <div className="py-16 text-center text-muted-foreground">Loading leases...</div>
+          ) : filtered.length === 0 ? (
+            <div className="py-16 text-center">
+              <FileText size={40} className="mx-auto mb-3 text-muted-foreground" />
+              <p className="text-muted-foreground">No leases found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-secondary/30">
+                    <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tenant</th>
+                    <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Property</th>
+                    <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration</th>
+                    <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Rent</th>
+                    <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+                    <th className="p-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filtered.map((lease) => {
+                    const config = statusConfig[lease.status];
+                    return (
+                      <tr key={lease._id} className="transition-colors hover:bg-secondary/50">
+                        <td className="p-4">
+                          <div className="font-medium text-foreground">{lease.tenantName}</div>
+                          {lease.tenantEmail && <div className="text-xs text-muted-foreground">{lease.tenantEmail}</div>}
+                        </td>
+                        <td className="p-4">
+                          <p className="text-sm text-foreground">{lease.hostel?.name || 'Unknown hostel'}</p>
+                          <p className="text-xs text-muted-foreground">{lease.roomLabel || 'No room label'}</p>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Calendar size={13} />
+                            {formatDate(lease.startDate)} - {formatDate(lease.endDate)}
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm font-semibold text-foreground">KES {Number(lease.monthlyRent || 0).toLocaleString()}/mo</td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${config.bg} ${config.color}`}>
+                            {config.icon}
+                            {lease.status === 'expiring' ? `Expiring (${lease.daysRemaining}d)` : lease.status.charAt(0).toUpperCase() + lease.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          {lease.status === 'expiring' && <button onClick={() => void handleRenew(lease)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">Renew</button>}
+                          {lease.status === 'expired' && <button onClick={() => void handleArchive(lease)} className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary">Archive</button>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

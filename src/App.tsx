@@ -116,7 +116,7 @@ function RoleBasedRedirect() {
     case 'student':
       return <Navigate to="/student/dashboard" replace />;
     case 'owner':
-      return <Navigate to="/owner/dashboard" replace />;
+      return <Navigate to={profile.isApproved ? "/owner/dashboard" : "/owner/verification"} replace />;
     case 'admin':
       return <Navigate to="/admin/dashboard" replace />;
     default:
@@ -278,6 +278,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
                   <EditHostel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/hostels/preview/:id"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <HostelDetails previewMode />
                 </ProtectedRoute>
               }
             />

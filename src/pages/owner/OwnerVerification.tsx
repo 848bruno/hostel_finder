@@ -1,205 +1,416 @@
-import { useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
-import { motion } from 'framer-motion';
-import { Upload, FileCheck, AlertCircle, CheckCircle2, Clock, User, Building2, FileText, ChevronRight } from 'lucide-react';
+import { ApiError, api, getToken } from '../../lib/api';
+import { AlertCircle, CheckCircle2, Clock, Download, FileText, RefreshCw, Upload, XCircle } from 'lucide-react';
 
-type VerifStep = 'identity' | 'business' | 'documents' | 'review';
+type VerificationStatus = 'not_submitted' | 'submitted' | 'approved' | 'rejected';
+type DocumentKey = 'idDocument' | 'businessCertificate' | 'taxComplianceCertificate' | 'propertyProof';
 
-const steps: { id: VerifStep; label: string; icon: React.ElementType; description: string }[] = [
-  { id: 'identity', label: 'Identity', icon: User, description: 'Personal identification' },
-  { id: 'business', label: 'Business', icon: Building2, description: 'Business registration' },
-  { id: 'documents', label: 'Documents', icon: FileText, description: 'Upload supporting docs' },
-  { id: 'review', label: 'Review', icon: CheckCircle2, description: 'Submit for review' },
+interface VerificationRecord {
+  status: VerificationStatus;
+  rejectionReason: string;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  personalInfo: {
+    fullName: string;
+    idNumber: string;
+    phone: string;
+  };
+  businessInfo: {
+    name: string;
+    registrationNumber: string;
+    kraPin: string;
+  };
+  documents: Record<DocumentKey, string>;
+}
+
+interface VerificationResponse {
+  verification: VerificationRecord;
+  profile: {
+    username: string;
+    email: string;
+    phone: string;
+  };
+}
+
+interface FormState {
+  fullName: string;
+  idNumber: string;
+  phone: string;
+  businessName: string;
+  registrationNumber: string;
+  kraPin: string;
+}
+
+type FileState = Record<DocumentKey, File | null>;
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5100/api';
+
+const emptyVerification: VerificationRecord = {
+  status: 'not_submitted',
+  rejectionReason: '',
+  submittedAt: null,
+  reviewedAt: null,
+  personalInfo: {
+    fullName: '',
+    idNumber: '',
+    phone: '',
+  },
+  businessInfo: {
+    name: '',
+    registrationNumber: '',
+    kraPin: '',
+  },
+  documents: {
+    idDocument: '',
+    businessCertificate: '',
+    taxComplianceCertificate: '',
+    propertyProof: '',
+  },
+};
+
+const emptyFiles: FileState = {
+  idDocument: null,
+  businessCertificate: null,
+  taxComplianceCertificate: null,
+  propertyProof: null,
+};
+
+const documentConfig: Array<{ key: DocumentKey; label: string; required: boolean; helper: string }> = [
+  { key: 'idDocument', label: 'National ID', required: true, helper: 'Front/back scan or PDF.' },
+  { key: 'businessCertificate', label: 'Business certificate', required: true, helper: 'Registration or business license document.' },
+  { key: 'taxComplianceCertificate', label: 'KRA tax compliance certificate', required: false, helper: 'Optional, but useful for review.' },
+  { key: 'propertyProof', label: 'Property ownership or lease proof', required: true, helper: 'Title, lease agreement, or management authority.' },
 ];
 
+async function downloadProtectedDocument(path: string, fileName: string) {
+  const token = getToken();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!response.ok) {
+    let message = 'Failed to download document.';
+    try {
+      const data = await response.json();
+      message = data.message || message;
+    } catch {
+      // ignore invalid json error bodies
+    }
+    throw new ApiError(response.status, message);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+function formatDate(value: string | null) {
+  if (!value) return 'Not yet';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Not yet' : date.toLocaleString();
+}
+
 export function OwnerVerification() {
-  const { profile } = useAuth();
-  const [currentStep, setCurrentStep] = useState<VerifStep>('identity');
-  const [completedSteps, setCompletedSteps] = useState<VerifStep[]>([]);
-  const [identity, setIdentity] = useState({ fullName: profile?.username || '', idNumber: '', phone: '' });
-  const [business, setBusiness] = useState({ name: '', regNumber: '', kraPin: '' });
+  const { profile, updateProfile } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [verification, setVerification] = useState<VerificationRecord>(emptyVerification);
+  const [form, setForm] = useState<FormState>({
+    fullName: '',
+    idNumber: '',
+    phone: profile?.phone || '',
+    businessName: '',
+    registrationNumber: '',
+    kraPin: '',
+  });
+  const [files, setFiles] = useState<FileState>(emptyFiles);
 
-  const completeStep = (step: VerifStep) => {
-    if (!completedSteps.includes(step)) setCompletedSteps(prev => [...prev, step]);
-    const nextIndex = steps.findIndex(s => s.id === step) + 1;
-    if (nextIndex < steps.length) setCurrentStep(steps[nextIndex].id);
+  const canEdit = verification.status === 'not_submitted' || verification.status === 'rejected';
+
+  const loadVerification = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const data = await api.get<VerificationResponse>('/owners/verification');
+      setVerification(data.verification || emptyVerification);
+      setForm({
+        fullName: data.verification.personalInfo.fullName || data.profile.username || '',
+        idNumber: data.verification.personalInfo.idNumber || '',
+        phone: data.verification.personalInfo.phone || data.profile.phone || profile?.phone || '',
+        businessName: data.verification.businessInfo.name || '',
+        registrationNumber: data.verification.businessInfo.registrationNumber || '',
+        kraPin: data.verification.businessInfo.kraPin || '',
+      });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load verification details.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = () => {
-    setCompletedSteps([...steps.map(s => s.id)]);
-    alert('Verification submitted! We\'ll review your documents within 24-48 hours.');
+  useEffect(() => {
+    loadVerification();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleInputChange = (field: keyof FormState) => (event: ChangeEvent<HTMLInputElement>) => {
+    setForm((current) => ({ ...current, [field]: event.target.value }));
   };
+
+  const handleFileChange = (key: DocumentKey) => (event: ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] || null;
+    setFiles((current) => ({ ...current, [key]: nextFile }));
+  };
+
+  const handleDownload = async (documentType: DocumentKey) => {
+    setError('');
+    try {
+      await downloadProtectedDocument(`/owners/verification/documents/${documentType}`, `${documentType}-${profile?.username || 'owner'}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to download document.');
+    }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const payload = new FormData();
+      payload.append('fullName', form.fullName);
+      payload.append('idNumber', form.idNumber);
+      payload.append('phone', form.phone);
+      payload.append('businessName', form.businessName);
+      payload.append('registrationNumber', form.registrationNumber);
+      payload.append('kraPin', form.kraPin);
+
+      documentConfig.forEach(({ key }) => {
+        if (files[key]) {
+          payload.append(key, files[key] as File);
+        }
+      });
+
+      const result = await api.postForm<{ message: string; verification: VerificationRecord }>('/owners/verification', payload);
+      setVerification(result.verification);
+      setFiles(emptyFiles);
+      setSuccess(result.message);
+      await updateProfile({});
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to submit verification.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const statusTone = verification.status === 'approved'
+    ? 'bg-green-50 border-green-200 text-green-800'
+    : verification.status === 'submitted'
+    ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
+    : verification.status === 'rejected'
+    ? 'bg-red-50 border-red-200 text-red-800'
+    : 'bg-blue-50 border-blue-200 text-blue-800';
+
+  const StatusIcon = verification.status === 'approved'
+    ? CheckCircle2
+    : verification.status === 'submitted'
+    ? Clock
+    : verification.status === 'rejected'
+    ? XCircle
+    : AlertCircle;
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-foreground">Owner Verification</h1>
-          <p className="text-muted-foreground mt-1">Complete all steps to verify your identity and business</p>
-        </div>
-
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-warning/10 border border-warning/30 rounded-2xl p-5 mb-8 flex items-start gap-3">
-          <AlertCircle size={20} className="text-warning mt-0.5 shrink-0" />
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-medium text-foreground">Verification Required</p>
-            <p className="text-sm text-muted-foreground mt-1">Your hostels can't be published until verification is complete. This usually takes 24-48 hours.</p>
+            <h1 className="text-3xl font-heading font-bold text-foreground">Owner Verification</h1>
+            <p className="text-muted-foreground mt-1">Submit real identity and business documents for admin review.</p>
           </div>
-        </motion.div>
-
-        {/* Progress Steps */}
-        <div className="flex items-center justify-between mb-8 bg-card rounded-2xl p-4 shadow-card border border-border">
-          {steps.map((step, i) => {
-            const isCompleted = completedSteps.includes(step.id);
-            const isCurrent = currentStep === step.id;
-            const StepIcon = step.icon;
-            return (
-              <div key={step.id} className="flex items-center">
-                <button onClick={() => setCurrentStep(step.id)} className="flex flex-col items-center gap-1.5 group">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-                    isCompleted ? 'bg-green-500 text-white' : isCurrent ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-                  }`}>
-                    {isCompleted ? <CheckCircle2 size={20} /> : <StepIcon size={20} />}
-                  </div>
-                  <span className={`text-[11px] font-medium hidden sm:block ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>{step.label}</span>
-                </button>
-                {i < steps.length - 1 && <div className={`w-8 sm:w-16 h-0.5 mx-1 sm:mx-2 ${isCompleted ? 'bg-green-500' : 'bg-border'}`} />}
-              </div>
-            );
-          })}
+          <button
+            onClick={loadVerification}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary disabled:opacity-60"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Refresh status
+          </button>
         </div>
 
-        {/* Identity Step */}
-        {currentStep === 'identity' && (
-          <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} className="bg-card rounded-2xl p-6 md:p-8 shadow-card border border-border space-y-6">
-            <div className="flex items-center gap-3 pb-5 border-b border-border">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><User size={20} className="text-primary" /></div>
-              <div><h2 className="font-heading font-bold text-foreground">Personal Identity</h2><p className="text-sm text-muted-foreground">Confirm your personal details</p></div>
+        <div className={`rounded-2xl border p-5 ${statusTone}`}>
+          <div className="flex items-start gap-3">
+            <StatusIcon size={20} className="mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-semibold capitalize">{verification.status.replace('_', ' ')}</p>
+              <p className="text-sm">
+                {verification.status === 'approved' && 'Your owner account has been approved.'}
+                {verification.status === 'submitted' && 'Your documents are under review. You can refresh this page to check for updates.'}
+                {verification.status === 'rejected' && 'Your submission was rejected. Update the details below and resubmit.'}
+                {verification.status === 'not_submitted' && 'Submit the required documents to unlock the rest of the owner portal.'}
+              </p>
+              {verification.rejectionReason && (
+                <p className="text-sm font-medium">Reason: {verification.rejectionReason}</p>
+              )}
+              <p className="text-xs opacity-80">Submitted: {formatDate(verification.submittedAt)} | Reviewed: {formatDate(verification.reviewedAt)}</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Full Name *</label>
-                <input value={identity.fullName} onChange={e => setIdentity(p => ({ ...p, fullName: e.target.value }))} className="w-full py-3 px-4 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">National ID Number *</label>
-                <input value={identity.idNumber} onChange={e => setIdentity(p => ({ ...p, idNumber: e.target.value }))} placeholder="e.g. 12345678" className="w-full py-3 px-4 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-foreground mb-2">Phone Number *</label>
-                <input value={identity.phone} onChange={e => setIdentity(p => ({ ...p, phone: e.target.value }))} placeholder="+254 7XX XXX XXX" className="w-full py-3 px-4 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-foreground mb-2">Upload ID (Front & Back)</label>
-                <div className="border-2 border-dashed border-input rounded-xl p-6 text-center hover:border-primary/30 transition-colors cursor-pointer">
-                  <Upload size={28} className="text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">Click to upload your National ID</p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG up to 10MB</p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        )}
+
+        {success && (
+          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>
+        )}
+
+        {loading ? (
+          <div className="rounded-2xl border border-border bg-card p-10 text-center text-muted-foreground">Loading verification details...</div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+              <h2 className="text-lg font-semibold text-foreground">Personal details</h2>
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">Full name</label>
+                  <input
+                    value={form.fullName}
+                    onChange={handleInputChange('fullName')}
+                    disabled={!canEdit || saving}
+                    className="w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">National ID number</label>
+                  <input
+                    value={form.idNumber}
+                    onChange={handleInputChange('idNumber')}
+                    disabled={!canEdit || saving}
+                    className="w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-foreground">Phone number</label>
+                  <input
+                    value={form.phone}
+                    onChange={handleInputChange('phone')}
+                    disabled={!canEdit || saving}
+                    className="w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                  />
                 </div>
               </div>
-            </div>
-            <div className="flex justify-end pt-2">
-              <button onClick={() => completeStep('identity')} className="px-6 py-3 gradient-hero text-primary-foreground rounded-xl font-semibold text-sm hover:opacity-90 shadow-hero flex items-center gap-2">
-                Save & Continue <ChevronRight size={16} />
-              </button>
-            </div>
-          </motion.div>
-        )}
+            </section>
 
-        {/* Business Step */}
-        {currentStep === 'business' && (
-          <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} className="bg-card rounded-2xl p-6 md:p-8 shadow-card border border-border space-y-6">
-            <div className="flex items-center gap-3 pb-5 border-b border-border">
-              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center"><Building2 size={20} className="text-accent" /></div>
-              <div><h2 className="font-heading font-bold text-foreground">Business Information</h2><p className="text-sm text-muted-foreground">Your registered business details</p></div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-foreground mb-2">Business Name *</label>
-                <input value={business.name} onChange={e => setBusiness(p => ({ ...p, name: e.target.value }))} className="w-full py-3 px-4 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+              <h2 className="text-lg font-semibold text-foreground">Business details</h2>
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-foreground">Business name</label>
+                  <input
+                    value={form.businessName}
+                    onChange={handleInputChange('businessName')}
+                    disabled={!canEdit || saving}
+                    className="w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">Registration number</label>
+                  <input
+                    value={form.registrationNumber}
+                    onChange={handleInputChange('registrationNumber')}
+                    disabled={!canEdit || saving}
+                    className="w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-foreground">KRA PIN</label>
+                  <input
+                    value={form.kraPin}
+                    onChange={handleInputChange('kraPin')}
+                    disabled={!canEdit || saving}
+                    className="w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Registration Number</label>
-                <input value={business.regNumber} onChange={e => setBusiness(p => ({ ...p, regNumber: e.target.value }))} placeholder="e.g. PVT-12345" className="w-full py-3 px-4 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">KRA PIN</label>
-                <input value={business.kraPin} onChange={e => setBusiness(p => ({ ...p, kraPin: e.target.value }))} placeholder="e.g. A012345678Z" className="w-full py-3 px-4 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-            </div>
-            <div className="flex justify-between pt-2">
-              <button onClick={() => setCurrentStep('identity')} className="px-5 py-3 border border-input rounded-xl text-sm font-medium text-foreground hover:bg-secondary transition-colors">← Back</button>
-              <button onClick={() => completeStep('business')} className="px-6 py-3 gradient-hero text-primary-foreground rounded-xl font-semibold text-sm hover:opacity-90 shadow-hero flex items-center gap-2">Save & Continue <ChevronRight size={16} /></button>
-            </div>
-          </motion.div>
-        )}
+            </section>
 
-        {/* Documents Step */}
-        {currentStep === 'documents' && (
-          <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} className="bg-card rounded-2xl p-6 md:p-8 shadow-card border border-border space-y-6">
-            <div className="flex items-center gap-3 pb-5 border-b border-border">
-              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center"><FileText size={20} className="text-warning" /></div>
-              <div><h2 className="font-heading font-bold text-foreground">Supporting Documents</h2><p className="text-sm text-muted-foreground">Upload business and property documents</p></div>
-            </div>
-            {[
-              { label: 'Business License / Registration Certificate', desc: 'Official document proving your business is registered' },
-              { label: 'KRA Tax Compliance Certificate', desc: 'Current tax compliance certificate' },
-              { label: 'Property Ownership / Lease Agreement', desc: 'Proof that you own or lease the hostel property' },
-            ].map((doc, i) => (
-              <div key={i} className="border-2 border-dashed border-input rounded-xl p-5 hover:border-primary/30 transition-colors cursor-pointer">
-                <div className="flex items-start gap-3">
-                  <Upload size={20} className="text-muted-foreground mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{doc.label}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{doc.desc}</p>
+            <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+              <h2 className="text-lg font-semibold text-foreground">Documents</h2>
+              <div className="mt-4 space-y-4">
+                {documentConfig.map((documentField) => (
+                  <div key={documentField.key} className="rounded-2xl border border-border p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="space-y-1">
+                        <p className="font-medium text-foreground">
+                          {documentField.label}
+                          {documentField.required ? ' *' : ''}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{documentField.helper}</p>
+                        {verification.documents[documentField.key] && (
+                          <p className="text-xs text-green-700">Document on file.</p>
+                        )}
+                        {files[documentField.key] && (
+                          <p className="text-xs text-primary">Selected: {files[documentField.key]?.name}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {verification.documents[documentField.key] && (
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(documentField.key)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary"
+                          >
+                            <Download size={15} />
+                            Download current
+                          </button>
+                        )}
+                        {canEdit && (
+                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90">
+                            <Upload size={15} />
+                            {verification.documents[documentField.key] ? 'Replace' : 'Upload'}
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={handleFileChange(documentField.key)}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-            <div className="flex justify-between pt-2">
-              <button onClick={() => setCurrentStep('business')} className="px-5 py-3 border border-input rounded-xl text-sm font-medium text-foreground hover:bg-secondary transition-colors">← Back</button>
-              <button onClick={() => completeStep('documents')} className="px-6 py-3 gradient-hero text-primary-foreground rounded-xl font-semibold text-sm hover:opacity-90 shadow-hero flex items-center gap-2">Save & Continue <ChevronRight size={16} /></button>
-            </div>
-          </motion.div>
-        )}
+            </section>
 
-        {/* Review Step */}
-        {currentStep === 'review' && (
-          <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} className="bg-card rounded-2xl p-6 md:p-8 shadow-card border border-border space-y-6">
-            <div className="flex items-center gap-3 pb-5 border-b border-border">
-              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center"><CheckCircle2 size={20} className="text-green-600 dark:text-green-400" /></div>
-              <div><h2 className="font-heading font-bold text-foreground">Review & Submit</h2><p className="text-sm text-muted-foreground">Review your details before submitting</p></div>
-            </div>
-            <div className="space-y-4">
-              {[
-                { label: 'Full Name', value: identity.fullName },
-                { label: 'National ID', value: identity.idNumber || 'Not provided' },
-                { label: 'Phone', value: identity.phone || 'Not provided' },
-                { label: 'Business Name', value: business.name || 'Not provided' },
-                { label: 'Registration No.', value: business.regNumber || 'Not provided' },
-                { label: 'KRA PIN', value: business.kraPin || 'Not provided' },
-              ].map(item => (
-                <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
-                  <span className="text-sm text-muted-foreground">{item.label}</span>
-                  <span className="text-sm font-medium text-foreground">{item.value}</span>
-                </div>
-              ))}
-            </div>
-            <div className="bg-primary/5 rounded-xl p-4 flex items-start gap-3">
-              <Clock size={18} className="text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Verification Timeline</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Once submitted, our team will review your documents within 24-48 hours.</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground">
+                Required for submission: full name, ID number, phone, business name, ID document, business certificate, and property proof.
               </div>
+              {canEdit && (
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+                >
+                  <FileText size={16} />
+                  {saving ? 'Submitting...' : verification.status === 'rejected' ? 'Resubmit verification' : 'Submit verification'}
+                </button>
+              )}
             </div>
-            <div className="flex justify-between pt-2">
-              <button onClick={() => setCurrentStep('documents')} className="px-5 py-3 border border-input rounded-xl text-sm font-medium text-foreground hover:bg-secondary transition-colors">← Back</button>
-              <button onClick={handleSubmit} className="px-8 py-3 gradient-hero text-primary-foreground rounded-xl font-semibold text-sm hover:opacity-90 shadow-hero flex items-center gap-2">
-                <FileCheck size={18} /> Submit for Verification
-              </button>
-            </div>
-          </motion.div>
+          </form>
         )}
       </div>
     </DashboardLayout>

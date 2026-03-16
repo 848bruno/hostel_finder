@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 import {
   Building2, Users, DollarSign, TrendingUp, AlertCircle, PlusCircle,
-  ArrowUpRight, Calendar, CheckCircle2, Clock, XCircle
+  ArrowUpRight, Calendar, CheckCircle2, Clock, Megaphone, XCircle
 } from 'lucide-react';
 
 interface OwnerStats {
@@ -28,6 +28,15 @@ interface BookingRecord {
   hostel?: { name?: string };
   room?: { name?: string };
   createdAt?: string;
+}
+
+interface AnnouncementItem {
+  _id: string;
+  title: string;
+  message: string;
+  audience: 'all' | 'students' | 'owners';
+  publishedAt?: string;
+  createdAt: string;
 }
 
 const revenueData = [
@@ -96,6 +105,7 @@ export function OwnerDashboard() {
     totalHostels: 0, approvedHostels: 0, pendingHostels: 0, totalRooms: 0, availableRooms: 0,
   });
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadDashboardData(); }, []);
@@ -103,14 +113,16 @@ export function OwnerDashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [hostelStats, bookingsData] = await Promise.all([
+      const [hostelStats, bookingsData, announcementsData] = await Promise.all([
         api.get<OwnerStats>('/owners/stats'),
         api.get<{ bookings: BookingRecord[] } | BookingRecord[]>('/bookings/owner'),
+        api.get<{ announcements: AnnouncementItem[] }>('/owners/announcements'),
       ]);
 
       const bookingList = Array.isArray(bookingsData) ? bookingsData : (bookingsData.bookings ?? []);
       setStats(hostelStats);
       setBookings(bookingList);
+      setAnnouncements(announcementsData.announcements ?? []);
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
@@ -119,7 +131,14 @@ export function OwnerDashboard() {
   };
 
   const totalBookings = bookings.length;
-  const totalRevenue = useMemo(() => bookings.reduce((sum, b) => sum + Number(b.amount || 0), 0), [bookings]);
+  const confirmedBookings = useMemo(
+    () => bookings.filter((booking) => booking.status === 'confirmed' || booking.status === 'completed'),
+    [bookings]
+  );
+  const totalRevenue = useMemo(
+    () => confirmedBookings.reduce((sum, booking) => sum + Number(booking.amount || 0), 0),
+    [confirmedBookings]
+  );
   const occupancyRate = stats.totalRooms > 0
     ? Math.round(((stats.totalRooms - stats.availableRooms) / stats.totalRooms) * 100)
     : 0;
@@ -179,10 +198,39 @@ export function OwnerDashboard() {
         </motion.div>
       )}
 
+      {announcements.length > 0 && (
+        <div className="mb-8 rounded-2xl border border-border bg-card shadow-card">
+          <div className="flex items-center gap-3 border-b border-border p-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Megaphone size={18} />
+            </div>
+            <div>
+              <h2 className="font-heading text-lg font-bold text-foreground">Announcements</h2>
+              <p className="text-xs text-muted-foreground">Published updates relevant to owners</p>
+            </div>
+          </div>
+          <div className="divide-y divide-border">
+            {announcements.slice(0, 3).map((announcement) => (
+              <div key={announcement._id} className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground">{announcement.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{announcement.message}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {new Date(announcement.publishedAt || announcement.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard title="Total Hostels" value={stats.totalHostels} icon={Building2} variant="primary" />
-        <StatCard title="Active Bookings" value={bookings.filter(b => b.status === 'confirmed').length} icon={Users} />
+        <StatCard title="Active Bookings" value={confirmedBookings.filter(b => b.status === 'confirmed').length} icon={Users} />
         <StatCard title="Total Revenue" value={`KES ${totalRevenue.toLocaleString()}`} icon={DollarSign} variant="accent" />
         <StatCard title="Occupancy Rate" value={`${occupancyRate}%`} icon={TrendingUp} trend={occupancyRate > 0 ? `${stats.totalRooms - stats.availableRooms}/${stats.totalRooms} rooms` : undefined} />
       </div>

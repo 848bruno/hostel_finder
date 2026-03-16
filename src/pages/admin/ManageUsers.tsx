@@ -10,6 +10,7 @@ interface UserRow {
   role: 'student' | 'owner';
   isEmailVerified: boolean;
   isApproved?: boolean; // owners only
+  isSuspended?: boolean; // owners only
   createdAt: string;
 }
 
@@ -56,7 +57,13 @@ export function ManageUsers() {
     try {
       await api.put(`/admin/owners/${user._id}/${action}`);
       setUsers(prev => prev.map(u =>
-        u._id === user._id ? { ...u, isApproved: action === 'approve' } : u
+        u._id === user._id
+          ? {
+              ...u,
+              isApproved: action === 'approve' ? true : u.isApproved,
+              isSuspended: action === 'suspend' ? true : false,
+            }
+          : u
       ));
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : `Failed to ${action} owner.`);
@@ -173,8 +180,10 @@ export function ManageUsers() {
                       </td>
                       <td className="px-6 py-4">
                         {user.role === 'owner' ? (
-                          user.isApproved
+                          user.isApproved && !user.isSuspended
                             ? <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Approved</span>
+                            : user.isSuspended
+                            ? <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">Suspended</span>
                             : <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">Pending</span>
                         ) : <span className="text-gray-400 text-sm">—</span>}
                       </td>
@@ -184,7 +193,7 @@ export function ManageUsers() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           {user.role === 'owner' && (
-                            user.isApproved ? (
+                            user.isApproved && !user.isSuspended ? (
                               <button
                                 onClick={() => handleOwnerAction(user, 'suspend')}
                                 disabled={processing === user._id}
@@ -200,7 +209,7 @@ export function ManageUsers() {
                                 className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 text-xs font-medium transition-colors disabled:opacity-50"
                               >
                                 <ShieldCheck size={13} />
-                                {processing === user._id ? '...' : 'Approve'}
+                                {processing === user._id ? '...' : user.isSuspended ? 'Reactivate' : 'Approve'}
                               </button>
                             )
                           )}

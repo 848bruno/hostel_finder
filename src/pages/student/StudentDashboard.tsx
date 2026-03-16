@@ -9,6 +9,7 @@ import {
   Clock,
   CreditCard,
   MapPin,
+  Megaphone,
   Search,
   TrendingUp,
   Users,
@@ -25,6 +26,15 @@ interface ActivityItem {
   text: string;
   time: string;
   color: string;
+}
+
+interface AnnouncementItem {
+  _id: string;
+  title: string;
+  message: string;
+  audience: 'all' | 'students' | 'owners';
+  publishedAt?: string;
+  createdAt: string;
 }
 
 function getGreeting() {
@@ -216,6 +226,7 @@ export function StudentDashboard() {
   const cachedHostels = useSelector((state: RootState) => state.hostels.list);
   const [bookings, setLocalBookings] = useState<BookingItem[]>([]);
   const [recommendedHostels, setRecommendedHostels] = useState<BackendHostel[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -225,11 +236,12 @@ export function StudentDashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [bookingsData, hostelsData] = await Promise.all([
+      const [bookingsData, hostelsData, announcementsData] = await Promise.all([
         api.get<BookingItem[]>('/bookings/me'),
         cachedHostels.length > 0
           ? Promise.resolve({ hostels: cachedHostels })
           : api.get<{ hostels: BackendHostel[] }>('/hostels?limit=12'),
+        api.get<{ announcements: AnnouncementItem[] }>('/students/announcements'),
       ]);
 
       const bookingList = Array.isArray(bookingsData) ? bookingsData : [];
@@ -239,6 +251,7 @@ export function StudentDashboard() {
       setRecommendedHostels(
         hostelList.filter((hostel) => hostel.availableRooms > 0).slice(0, 3)
       );
+      setAnnouncements(announcementsData.announcements ?? []);
 
       dispatch(setBookings(bookingList));
       if (hostelList.length > 0) {
@@ -252,7 +265,7 @@ export function StudentDashboard() {
   };
 
   const activeBookings = useMemo(
-    () => bookings.filter((booking) => booking.status === 'confirmed').length,
+    () => bookings.filter((booking) => booking.status === 'confirmed' && booking.payment?.status === 'paid').length,
     [bookings]
   );
 
@@ -262,7 +275,9 @@ export function StudentDashboard() {
   );
 
   const totalSpent = useMemo(
-    () => bookings.reduce((sum, booking) => sum + Number(booking.amount || 0), 0),
+    () => bookings
+      .filter((booking) => booking.status === 'confirmed' && booking.payment?.status === 'paid')
+      .reduce((sum, booking) => sum + Number(booking.amount || 0), 0),
     [bookings]
   );
 
@@ -315,6 +330,35 @@ export function StudentDashboard() {
           Here&apos;s what&apos;s happening with your bookings
         </p>
       </div>
+
+      {announcements.length > 0 && (
+        <div className="mb-8 rounded-2xl border border-border bg-card shadow-card">
+          <div className="flex items-center gap-3 border-b border-border p-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Megaphone size={18} />
+            </div>
+            <div>
+              <h2 className="font-heading text-lg font-bold text-foreground">Announcements</h2>
+              <p className="text-xs text-muted-foreground">Published platform updates from admin</p>
+            </div>
+          </div>
+          <div className="divide-y divide-border">
+            {announcements.slice(0, 3).map((announcement) => (
+              <div key={announcement._id} className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground">{announcement.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{announcement.message}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {new Date(announcement.publishedAt || announcement.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mb-8 grid grid-cols-1 gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

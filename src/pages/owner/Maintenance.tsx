@@ -1,25 +1,42 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Wrench, AlertTriangle, CheckCircle2, Clock, Plus, Phone, MapPin, Calendar, Search, MessageCircle } from 'lucide-react';
+import { ApiError, api } from '../../lib/api';
+import { AlertTriangle, CheckCircle2, Clock, Phone, Plus, Search, Wrench } from 'lucide-react';
 
-// TODO: Replace with real API data when backend supports maintenance requests
 type Priority = 'urgent' | 'high' | 'medium' | 'low';
 type Status = 'open' | 'in_progress' | 'resolved';
 
-interface MaintenanceRequest {
-  id: string; tenant: string; phone: string; hostel: string; room: string;
-  category: string; description: string; priority: Priority; status: Status;
-  assignedTo?: string; created_at: string; resolved_at?: string;
+interface HostelOption {
+  _id: string;
+  name: string;
 }
 
-const mockRequests: MaintenanceRequest[] = [
-  { id: 'MR001', tenant: 'Brian Ochieng', phone: '+254712345678', hostel: 'KU Gate Hostel', room: 'Room 12A', category: 'Plumbing', description: 'Leaking tap in bathroom, water pooling on floor', priority: 'urgent', status: 'open', created_at: '2024-03-06' },
-  { id: 'MR002', tenant: 'Faith Wanjiku', phone: '+254723456789', hostel: 'Thika Road Apartments', room: 'Room 5B', category: 'Electrical', description: 'Power socket not working near study desk', priority: 'high', status: 'in_progress', assignedTo: 'John Mwangi (Electrician)', created_at: '2024-03-04' },
-  { id: 'MR003', tenant: 'Kevin Mutua', phone: '+254734567890', hostel: 'KU Gate Hostel', room: 'Room 8C', category: 'Furniture', description: 'Broken bed frame leg, bed unstable', priority: 'medium', status: 'in_progress', assignedTo: 'Peter Kamau (Carpenter)', created_at: '2024-03-03' },
-  { id: 'MR004', tenant: 'Mercy Akinyi', phone: '+254745678901', hostel: 'Riverside Studios', room: 'Room 3A', category: 'Security', description: 'Door lock jammed, cannot lock room properly', priority: 'urgent', status: 'open', created_at: '2024-03-05' },
-  { id: 'MR005', tenant: 'Samuel Kiprop', phone: '+254756789012', hostel: 'KU Gate Hostel', room: 'Room 15D', category: 'Plumbing', description: 'Toilet not flushing properly', priority: 'high', status: 'resolved', assignedTo: 'John Mwangi', created_at: '2024-02-28', resolved_at: '2024-03-01' },
-];
+interface MaintenanceRequest {
+  _id: string;
+  tenantName: string;
+  tenantPhone?: string;
+  roomLabel?: string;
+  category: string;
+  description: string;
+  priority: Priority;
+  status: Status;
+  assignedTo?: string;
+  createdAt: string;
+  resolvedAt?: string | null;
+  hostel?: { _id: string; name: string };
+  hostelName?: string;
+}
+
+interface MaintenanceResponse {
+  requests: MaintenanceRequest[];
+  stats: {
+    open: number;
+    in_progress: number;
+    resolved: number;
+    urgent: number;
+    averageResolutionDays: number;
+  };
+}
 
 const priorityConfig: Record<Priority, { color: string; bg: string; label: string }> = {
   urgent: { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30', label: 'Urgent' },
@@ -28,35 +45,122 @@ const priorityConfig: Record<Priority, { color: string; bg: string; label: strin
   low: { color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-900/30', label: 'Low' },
 };
 
-const statusConfig: Record<Status, { icon: React.ReactNode; color: string; label: string }> = {
-  open: { icon: <AlertTriangle size={14} />, color: 'text-red-600 dark:text-red-400', label: 'Open' },
-  in_progress: { icon: <Clock size={14} />, color: 'text-yellow-600 dark:text-yellow-400', label: 'In Progress' },
-  resolved: { icon: <CheckCircle2 size={14} />, color: 'text-green-600 dark:text-green-400', label: 'Resolved' },
+const statusConfig: Record<Status, { color: string; label: string; icon: React.ReactNode }> = {
+  open: { color: 'text-red-600 dark:text-red-400', label: 'Open', icon: <AlertTriangle size={14} /> },
+  in_progress: { color: 'text-yellow-600 dark:text-yellow-400', label: 'In Progress', icon: <Clock size={14} /> },
+  resolved: { color: 'text-green-600 dark:text-green-400', label: 'Resolved', icon: <CheckCircle2 size={14} /> },
 };
 
-const categories = ['All', 'Plumbing', 'Electrical', 'Furniture', 'Security', 'Pest Control'];
+const categories = ['All', 'Plumbing', 'Electrical', 'Furniture', 'Security', 'Pest Control', 'Cleaning', 'Internet'];
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString();
+}
 
 export function Maintenance() {
+  const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
+  const [hostels, setHostels] = useState<HostelOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | Status>('all');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-
-  const filtered = mockRequests.filter(r => {
-    if (activeTab !== 'all' && r.status !== activeTab) return false;
-    if (selectedCategory !== 'All' && r.category !== selectedCategory) return false;
-    if (searchQuery && !r.description.toLowerCase().includes(searchQuery.toLowerCase()) && !r.tenant.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
+  const [stats, setStats] = useState<MaintenanceResponse['stats']>({
+    open: 0,
+    in_progress: 0,
+    resolved: 0,
+    urgent: 0,
+    averageResolutionDays: 0,
+  });
+  const [form, setForm] = useState({
+    hostelId: '',
+    tenantName: '',
+    tenantPhone: '',
+    roomLabel: '',
+    category: 'Plumbing',
+    description: '',
+    priority: 'medium' as Priority,
+    assignedTo: '',
   });
 
-  const stats = {
-    open: mockRequests.filter(r => r.status === 'open').length,
-    in_progress: mockRequests.filter(r => r.status === 'in_progress').length,
-    resolved: mockRequests.filter(r => r.status === 'resolved').length,
-    urgent: mockRequests.filter(r => r.priority === 'urgent' && r.status !== 'resolved').length,
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [maintenanceData, hostelData] = await Promise.all([
+        api.get<MaintenanceResponse>('/owners/maintenance'),
+        api.get<{ hostels: HostelOption[] }>('/owners/hostels'),
+      ]);
+      setRequests(maintenanceData.requests);
+      setStats(maintenanceData.stats);
+      setHostels(hostelData.hostels || []);
+      setForm((current) => ({
+        ...current,
+        hostelId: current.hostelId || hostelData.hostels?.[0]?._id || '',
+      }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load maintenance requests.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const filtered = useMemo(() => requests.filter((request) => {
+    if (activeTab !== 'all' && request.status !== activeTab) return false;
+    if (selectedCategory !== 'All' && request.category !== selectedCategory) return false;
+    if (searchQuery) {
+      const target = `${request.description} ${request.tenantName} ${request.hostelName || request.hostel?.name || ''}`.toLowerCase();
+      if (!target.includes(searchQuery.toLowerCase())) return false;
+    }
+    return true;
+  }), [activeTab, requests, searchQuery, selectedCategory]);
+
+  const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+
+    try {
+      const result = await api.post<{ request: MaintenanceRequest; message: string }>('/owners/maintenance', form);
+      setRequests((current) => [result.request, ...current]);
+      setShowForm(false);
+      setForm({
+        hostelId: hostels[0]?._id || '',
+        tenantName: '',
+        tenantPhone: '',
+        roomLabel: '',
+        category: 'Plumbing',
+        description: '',
+        priority: 'medium',
+        assignedTo: '',
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create maintenance request.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdate = async (id: string, updates: Partial<MaintenanceRequest>) => {
+    setError('');
+    try {
+      const result = await api.put<{ request: MaintenanceRequest }>(`/owners/maintenance/${id}`, updates);
+      setRequests((current) => current.map((request) => request._id === id ? result.request : request));
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to update maintenance request.');
+    }
   };
 
   const tabs: { key: 'all' | Status; label: string; count: number }[] = [
-    { key: 'all', label: 'All Requests', count: mockRequests.length },
+    { key: 'all', label: 'All Requests', count: requests.length },
     { key: 'open', label: 'Open', count: stats.open },
     { key: 'in_progress', label: 'In Progress', count: stats.in_progress },
     { key: 'resolved', label: 'Resolved', count: stats.resolved },
@@ -65,93 +169,141 @@ export function Maintenance() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-heading font-bold text-foreground">Maintenance Requests</h1>
-            <p className="text-muted-foreground text-sm mt-1">Track and manage property maintenance issues</p>
+            <p className="mt-1 text-sm text-muted-foreground">Track and manage property maintenance issues.</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90">
-            <Plus size={18} /> Log Request
+          <button
+            onClick={() => setShowForm((current) => !current)}
+            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
+          >
+            <Plus size={18} />
+            {showForm ? 'Hide Form' : 'Log Request'}
           </button>
         </div>
 
-        {stats.urgent > 0 && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 flex items-center gap-3">
-            <AlertTriangle size={20} className="text-red-600 dark:text-red-400" />
-            <p className="text-sm font-medium text-red-700 dark:text-red-300">{stats.urgent} urgent request{stats.urgent > 1 ? 's' : ''} need immediate attention</p>
-          </motion.div>
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {showForm && (
+          <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-card p-5 shadow-card md:grid-cols-2">
+            <select value={form.hostelId} onChange={(event) => setForm((current) => ({ ...current, hostelId: event.target.value }))} className="rounded-xl border border-input bg-background px-4 py-3 text-sm">
+              {hostels.map((hostel) => <option key={hostel._id} value={hostel._id}>{hostel.name}</option>)}
+            </select>
+            <input value={form.tenantName} onChange={(event) => setForm((current) => ({ ...current, tenantName: event.target.value }))} placeholder="Tenant name" className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <input value={form.tenantPhone} onChange={(event) => setForm((current) => ({ ...current, tenantPhone: event.target.value }))} placeholder="Tenant phone" className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <input value={form.roomLabel} onChange={(event) => setForm((current) => ({ ...current, roomLabel: event.target.value }))} placeholder="Room label" className="rounded-xl border border-input bg-background px-4 py-3 text-sm" />
+            <select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} className="rounded-xl border border-input bg-background px-4 py-3 text-sm">
+              {categories.filter((category) => category !== 'All').map((category) => <option key={category}>{category}</option>)}
+            </select>
+            <select value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as Priority }))} className="rounded-xl border border-input bg-background px-4 py-3 text-sm">
+              {Object.keys(priorityConfig).map((priority) => <option key={priority} value={priority}>{priorityConfig[priority as Priority].label}</option>)}
+            </select>
+            <input value={form.assignedTo} onChange={(event) => setForm((current) => ({ ...current, assignedTo: event.target.value }))} placeholder="Assigned staff (optional)" className="rounded-xl border border-input bg-background px-4 py-3 text-sm md:col-span-2" />
+            <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Describe the issue" rows={4} className="rounded-xl border border-input bg-background px-4 py-3 text-sm md:col-span-2" />
+            <button disabled={saving || hostels.length === 0} className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60 md:col-span-2">
+              {saving ? 'Saving...' : 'Create Request'}
+            </button>
+          </form>
+        )}
+
+        {stats.urgent > 0 && (
+          <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-100 p-4 dark:border-red-800/30 dark:bg-red-900/20">
+            <AlertTriangle size={20} className="text-red-600 dark:text-red-400" />
+            <p className="text-sm font-medium text-red-700 dark:text-red-300">{stats.urgent} urgent request{stats.urgent > 1 ? 's' : ''} need immediate attention.</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
             { label: 'Open', value: stats.open, color: 'text-red-600 dark:text-red-400' },
             { label: 'In Progress', value: stats.in_progress, color: 'text-yellow-600 dark:text-yellow-400' },
             { label: 'Resolved', value: stats.resolved, color: 'text-green-600 dark:text-green-400' },
-            { label: 'Avg Resolution', value: '2.3 days', color: 'text-primary' },
-          ].map(s => (
-            <div key={s.label} className="p-4 rounded-xl bg-card border border-border">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+            { label: 'Avg Resolution', value: `${stats.averageResolutionDays || 0} days`, color: 'text-primary' },
+          ].map((item) => (
+            <div key={item.label} className="rounded-xl border border-border bg-card p-4">
+              <p className="text-xs text-muted-foreground">{item.label}</p>
+              <p className={`mt-1 text-2xl font-bold ${item.color}`}>{item.value}</p>
             </div>
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex gap-1 bg-muted p-1 rounded-xl overflow-x-auto">
-            {tabs.map(t => (
-              <button key={t.key} onClick={() => setActiveTab(t.key)} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${activeTab === t.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-                {t.label} ({t.count})
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex gap-1 overflow-x-auto rounded-xl bg-muted p-1">
+            {tabs.map((tab) => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors ${activeTab === tab.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                {tab.label} ({tab.count})
               </button>
             ))}
           </div>
-          <div className="flex gap-2 flex-1">
+          <div className="flex flex-1 gap-2">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search requests..." className="w-full pl-9 pr-4 py-2 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search requests..." className="w-full rounded-xl border border-border bg-card py-2 pl-9 pr-4 text-sm" />
             </div>
-            <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="px-3 py-2 rounded-xl bg-card border border-border text-sm text-foreground focus:outline-none">
-              {categories.map(c => <option key={c}>{c}</option>)}
+            <select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)} className="rounded-xl border border-border bg-card px-3 py-2 text-sm">
+              {categories.map((category) => <option key={category}>{category}</option>)}
             </select>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((req, i) => (
-              <motion.div key={req.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ delay: i * 0.05 }} className="p-4 sm:p-5 rounded-xl bg-card border border-border hover:shadow-md transition-shadow">
-                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+        {loading ? (
+          <div className="rounded-xl border border-border bg-card py-16 text-center text-muted-foreground">Loading maintenance requests...</div>
+        ) : filtered.length === 0 ? (
+          <div className="py-16 text-center">
+            <Wrench size={40} className="mx-auto mb-3 text-muted-foreground" />
+            <p className="text-muted-foreground">No maintenance requests found.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((request) => (
+              <div key={request._id} className="rounded-xl border border-border bg-card p-4 transition-shadow hover:shadow-md sm:p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                   <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-mono text-muted-foreground">{req.id}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${priorityConfig[req.priority].bg} ${priorityConfig[req.priority].color}`}>{priorityConfig[req.priority].label}</span>
-                      <span className={`flex items-center gap-1 text-xs font-medium ${statusConfig[req.status].color}`}>{statusConfig[req.status].icon} {statusConfig[req.status].label}</span>
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-secondary text-secondary-foreground">{req.category}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-mono text-muted-foreground">{request._id.slice(-6).toUpperCase()}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${priorityConfig[request.priority].bg} ${priorityConfig[request.priority].color}`}>{priorityConfig[request.priority].label}</span>
+                      <span className={`flex items-center gap-1 text-xs font-medium ${statusConfig[request.status].color}`}>{statusConfig[request.status].icon} {statusConfig[request.status].label}</span>
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">{request.category}</span>
                     </div>
-                    <p className="text-sm font-medium text-foreground">{req.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><MapPin size={12} />{req.hostel} · {req.room}</span>
-                      <span className="flex items-center gap-1"><Calendar size={12} />{req.created_at}</span>
+                    <p className="text-sm font-medium text-foreground">{request.description}</p>
+                    <div className="text-xs text-muted-foreground">
+                      {request.hostelName || request.hostel?.name || 'Unknown hostel'}{request.roomLabel ? ` · ${request.roomLabel}` : ''} · {formatDate(request.createdAt)}
                     </div>
-                    <p className="text-xs text-muted-foreground">Reported by: <span className="font-medium text-foreground">{req.tenant}</span></p>
-                    {req.assignedTo && <p className="text-xs text-primary">Assigned to: {req.assignedTo}</p>}
+                    <p className="text-xs text-muted-foreground">Reported by <span className="font-medium text-foreground">{request.tenantName}</span>{request.tenantPhone ? ` (${request.tenantPhone})` : ''}</p>
+                    {request.assignedTo && <p className="text-xs text-primary">Assigned to: {request.assignedTo}</p>}
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => window.open(`tel:${req.phone}`)} className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:opacity-80" title="Call tenant"><Phone size={16} /></button>
-                    <button className="p-2 rounded-lg bg-primary/10 text-primary hover:opacity-80" title="Message"><MessageCircle size={16} /></button>
-                    {req.status === 'open' && <button className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90">Assign</button>}
-                    {req.status === 'in_progress' && <button className="px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:opacity-90">Resolve</button>}
+                  <div className="flex shrink-0 gap-2">
+                    {request.tenantPhone && (
+                      <button onClick={() => window.open(`tel:${request.tenantPhone}`)} className="rounded-lg bg-green-100 p-2 text-green-700 hover:opacity-80 dark:bg-green-900/30 dark:text-green-400" title="Call tenant">
+                        <Phone size={16} />
+                      </button>
+                    )}
+                    {request.status === 'open' && (
+                      <button
+                        onClick={() => {
+                          const assignedTo = window.prompt('Assign this request to:', request.assignedTo || '');
+                          if (assignedTo === null) return;
+                          void handleUpdate(request._id, { status: 'in_progress', assignedTo });
+                        }}
+                        className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                      >
+                        Assign
+                      </button>
+                    )}
+                    {request.status === 'in_progress' && (
+                      <button onClick={() => void handleUpdate(request._id, { status: 'resolved' })} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:opacity-90">
+                        Resolve
+                      </button>
+                    )}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
-          </AnimatePresence>
-          {filtered.length === 0 && (
-            <div className="py-16 text-center">
-              <Wrench size={40} className="text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No maintenance requests found</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
