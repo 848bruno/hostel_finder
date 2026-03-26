@@ -20,7 +20,11 @@ export function removeToken(): void {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+    public errors: string[] = []
+  ) {
     super(message);
     this.name = 'ApiError';
   }
@@ -63,7 +67,11 @@ async function request<T>(
     const data = raw ? JSON.parse(raw) : {};
 
     if (!response.ok) {
-      throw new ApiError(response.status, data.message || 'Request failed');
+      const details = Array.isArray(data.errors)
+        ? data.errors.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
+        : [];
+      const message = details.length > 0 ? details.join(' ') : data.message || 'Request failed';
+      throw new ApiError(response.status, message, details);
     }
 
     return data as T;

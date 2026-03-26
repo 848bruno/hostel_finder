@@ -1,0 +1,173 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ComponentProps, ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import Chatbot from "./Chatbot";
+
+let mockUser: {
+  id: string;
+  username: string;
+  email: string;
+  role: "student" | "owner" | "admin";
+} | null = null;
+
+vi.mock("../contexts/AuthContext", () => ({
+  useAuth: () => ({
+    user: mockUser,
+  }),
+}));
+
+vi.mock("framer-motion", async () => {
+  const React = await import("react");
+  const omittedProps = new Set([
+    "initial",
+    "animate",
+    "exit",
+    "transition",
+    "whileHover",
+    "whileTap",
+    "layout",
+  ]);
+
+  const motion = new Proxy(
+    {},
+    {
+      get: (_, tag: string) =>
+        React.forwardRef<HTMLElement, ComponentProps<"div">>(({ children, ...props }, ref) => {
+          const domProps = Object.fromEntries(
+            Object.entries(props).filter(([key]) => !omittedProps.has(key))
+          );
+
+          return React.createElement(tag, { ...domProps, ref }, children);
+        }),
+    }
+  );
+
+  return {
+    motion,
+    AnimatePresence: ({ children }: { children: ReactNode }) => React.createElement(React.Fragment, null, children),
+  };
+});
+
+const fetchMock = vi.fn<typeof fetch>();
+
+const jsonResponse = (body: unknown, init?: ResponseInit) =>
+  new Response(JSON.stringify(body), {
+    status: init?.status ?? 200,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers || {}),
+    },
+  });
+
+describe("Chatbot", () => {
+  beforeEach(() => {
+    mockUser = null;
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  it("restores a saved chat session from the backend", async () => {
+    localStorage.setItem("shf_chatbot_session_id", "session-123");
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        sessionId: "session-123",
+        messages: [
+          {
+            id: "m1",
+            role: "user",
+            content: "Need a hostel near Kirinyaga University",
+            createdAt: "2026-03-27T10:00:00.000Z",
+          },
+          {
+            id: "m2",
+            role: "assistant",
+            content: "I can help you filter by city, price, or proximity.",
+            createdAt: "2026-03-27T10:00:05.000Z",
+          },
+        ],
+      })
+    );
+
+    render(<Chatbot />);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:5100/api/chatbot/sessions/session-123",
+        expect.objectContaining({ method: "GET" })
+      );
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Open Chat" }));
+
+    expect(await screen.findByText("Need a hostel near Kirinyaga University")).toBeInTheDocument();
+    expect(screen.getByText("I can help you filter by city, price, or proximity.")).toBeInTheDocument();
+  });
+
+  it("sends a real chatbot request and renders backend suggestions", async () => {
+    mockUser = {
+      id: "student-1",
+      username: "Student One",
+      email: "student@example.com",
+      role: "student",
+    };
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        sessionId: "session-456",
+        reply: "You can start by filtering approved hostels near Kirinyaga University.",
+        model: "gemini-2.5-flash",
+        provider: "gemini",
+        usedStub: false,
+        usedFallback: false,
+        suggestions: ["Filter hostels by city and price", "How does proximity search work?"],
+      })
+    );
+
+    render(<Chatbot />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Open Chat" }));
+    const input = screen.getByPlaceholderText("Ask about hostels, payments, bookings...");
+    fireEvent.change(input, { target: { value: "Show me hostels near Kirinyaga University" } });
+    expect(input).toHaveValue("Show me hostels near Kirinyaga University");
+    await userEvent.click(screen.getByRole("button", { name: "Send Message" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://localhost:5100/api/chatbot/message");
+    expect(request?.method).toBe("POST");
+
+    const payload = JSON.parse(String(request?.body));
+    expect(payload.message).toBe("Show me hostels near Kirinyaga University");
+    expect(payload.user).toEqual({ id: "student-1", role: "student" });
+    expect(payload.context.primaryUniversity).toBe("Kirinyaga University");
+
+    expect(await screen.findByText("You can start by filtering approved hostels near Kirinyaga University.")).toBeInTheDocument();
+    expect(screen.getByText("Filter hostels by city and price")).toBeInTheDocument();
+    expect(localStorage.getItem("shf_chatbot_session_id")).toBe("session-456");
+  });
+
+  it("shows a safe fallback message when the backend returns an error", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(
+        { message: "Chatbot service timed out." },
+        { status: 504 }
+      )
+    );
+
+    render(<Chatbot />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Open Chat" }));
+    const input = screen.getByPlaceholderText("Ask about hostels, payments, bookings...");
+    fireEvent.change(input, { target: { value: "How do I pay with M-Pesa?" } });
+    expect(input).toHaveValue("How do I pay with M-Pesa?");
+    await userEvent.click(screen.getByRole("button", { name: "Send Message" }));
+
+    expect(await screen.findByText("I couldn't complete that request right now.")).toBeInTheDocument();
+    expect(screen.getByText("Chatbot service timed out.")).toBeInTheDocument();
+  });
+});
