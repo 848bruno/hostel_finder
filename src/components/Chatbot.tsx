@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Bot, User } from "lucide-react";
+import { MessageCircle, X, Send, Bot, User, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 
 import { useAuth } from "../contexts/AuthContext";
 import { ApiError, api } from "../lib/api";
@@ -108,6 +108,7 @@ const Chatbot = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -183,6 +184,7 @@ const Chatbot = () => {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setSuggestions([]);
+    setShowAllSuggestions(false);
     setIsTyping(true);
 
     try {
@@ -217,6 +219,7 @@ const Chatbot = () => {
         localStorage.setItem(CHATBOT_SESSION_KEY, nextSessionId);
       }
       setSuggestions(response.suggestions ?? []);
+      setShowAllSuggestions(false);
       setMessages((prev) => [...prev, buildAssistantMessage(response.reply)]);
     } catch (error) {
       const message =
@@ -242,6 +245,17 @@ const Chatbot = () => {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  const visibleSuggestions = showAllSuggestions ? suggestions : suggestions.slice(0, 2);
+  const hiddenSuggestionCount = Math.max(0, suggestions.length - visibleSuggestions.length);
+  const userModeLabel =
+    user?.role === "owner"
+      ? "Owner mode"
+      : user?.role === "admin"
+        ? "Admin mode"
+        : user?.role === "student"
+          ? "Student mode"
+          : "Guest mode";
+
   return (
     <>
       <AnimatePresence>
@@ -255,11 +269,15 @@ const Chatbot = () => {
             <button
               onClick={() => setIsOpen(true)}
               aria-label="Open Chat"
-              className="flex items-center justify-center h-14 w-14 rounded-full gradient-hero shadow-hero hover:opacity-90 transition-opacity"
+              className="group relative flex h-16 w-16 items-center justify-center rounded-[1.4rem] gradient-hero shadow-[0_18px_45px_rgba(12,84,72,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_55px_rgba(12,84,72,0.38)]"
             >
-              <MessageCircle className="h-6 w-6 text-primary-foreground" />
+              <div className="absolute inset-[1px] rounded-[1.28rem] bg-white/10 opacity-70" />
+              <MessageCircle className="relative h-6 w-6 text-primary-foreground" />
             </button>
-            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-accent border-2 border-background animate-pulse" />
+            <div className="pointer-events-none absolute -left-24 top-1/2 hidden -translate-y-1/2 rounded-full border border-border/70 bg-background/95 px-3 py-1 text-[11px] font-medium text-foreground shadow-lg backdrop-blur md:block">
+              Ask Smart Hostel
+            </div>
+            <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full border-2 border-background bg-accent animate-pulse" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -271,46 +289,88 @@ const Chatbot = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)] max-h-[600px] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+            className="fixed bottom-6 right-6 z-50 flex max-h-[680px] w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[2rem] border border-border/70 bg-background/95 shadow-[0_28px_80px_rgba(15,23,42,0.25)] backdrop-blur-xl"
           >
-            <div className="flex items-center justify-between p-4 gradient-hero">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                  <Bot className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-heading font-semibold text-sm text-primary-foreground">Smart Hostel Assistant</h3>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                    <p className="text-xs text-primary-foreground/70">Online · Live backend replies</p>
+            <div className="relative overflow-hidden border-b border-white/10 px-5 pb-5 pt-4 gradient-hero">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_42%)]" />
+              <div className="relative flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/16 shadow-inner shadow-white/10">
+                    <Bot className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <h3 className="font-heading text-sm font-semibold tracking-wide text-primary-foreground">Smart Hostel Assistant</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-primary-foreground/78">
+                        Hostel search, bookings, payments, and grounded platform help in one thread.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-primary-foreground">
+                        <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+                        Live replies
+                      </span>
+                      <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-primary-foreground/86">
+                        {userModeLabel}
+                      </span>
+                      {sessionId && (
+                        <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-primary-foreground/86">
+                          Session active
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/16 bg-white/10 text-primary-foreground transition-colors hover:bg-white/20"
+                  aria-label="Close Chat"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-primary-foreground hover:bg-primary-foreground/20 transition-colors"
-                aria-label="Close Chat"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
 
-            <div className="flex-1 max-h-[380px] overflow-y-auto" ref={scrollRef}>
-              <div className="p-4 space-y-4">
+            <div className="relative flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(244,248,247,0.96),rgba(255,255,255,0.98))]" ref={scrollRef}>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.08),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.07),transparent_30%)]" />
+              <div className="relative space-y-5 px-4 py-5">
+                {messages.length <= 1 && (
+                  <div className="rounded-[1.6rem] border border-white/75 bg-white/78 p-4 shadow-[0_16px_40px_rgba(148,163,184,0.14)] backdrop-blur">
+                    <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/80">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Quick Start
+                    </div>
+                    <p className="mb-4 max-w-[32ch] text-sm leading-relaxed text-slate-700">
+                      Ask directly, or start with one of these shortcuts to get grounded answers faster.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {quickActions.map((action) => (
+                        <button
+                          key={action}
+                          onClick={() => void sendMessage(action)}
+                          className="rounded-2xl border border-slate-200/80 bg-slate-50/85 px-3 py-3 text-left text-xs font-medium text-slate-700 transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-white hover:shadow-sm"
+                        >
+                          {action}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {messages.map((msg, idx) => (
                   <motion.div
                     key={msg.id}
                     initial={idx > 0 ? { opacity: 0, y: 8 } : false}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
-                    className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+                    className={`flex items-end gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
                   >
-                    <div className="relative flex shrink-0 overflow-hidden rounded-full h-7 w-7 mt-0.5">
+                    <div className="relative mt-0.5 flex h-8 w-8 shrink-0 overflow-hidden rounded-2xl">
                       <div
-                        className={`flex h-full w-full items-center justify-center rounded-full ${
+                        className={`flex h-full w-full items-center justify-center rounded-2xl ${
                           msg.role === "assistant"
-                            ? "bg-primary/10 text-primary"
-                            : "bg-accent/10 text-accent/80"
+                            ? "bg-primary/12 text-primary shadow-inner shadow-primary/5"
+                            : "bg-slate-900 text-white"
                         }`}
                       >
                         {msg.role === "assistant" ? (
@@ -320,17 +380,17 @@ const Chatbot = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1 max-w-[78%]">
+                    <div className={`flex max-w-[82%] flex-col gap-1.5 ${msg.role === "user" ? "items-end" : "items-start"}`}>
                       <div
-                        className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                        className={`rounded-[1.4rem] px-4 py-3 text-sm leading-relaxed shadow-[0_10px_32px_rgba(15,23,42,0.08)] ${
                           msg.role === "user"
-                            ? "gradient-hero text-primary-foreground rounded-br-md"
-                            : "bg-secondary text-secondary-foreground rounded-bl-md"
+                            ? "rounded-br-md gradient-hero text-primary-foreground"
+                            : "rounded-bl-md border border-white/90 bg-white/90 text-slate-700"
                         }`}
                       >
                         {renderContent(msg.content)}
                       </div>
-                      <span className={`text-[10px] text-muted-foreground ${msg.role === "user" ? "text-right" : ""}`}>
+                      <span className="px-1 text-[10px] uppercase tracking-[0.14em] text-slate-400">
                         {formatTime(msg.timestamp)}
                       </span>
                     </div>
@@ -343,17 +403,17 @@ const Chatbot = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex gap-2.5"
                   >
-                    <div className="relative flex shrink-0 overflow-hidden rounded-full h-7 w-7">
-                      <div className="flex h-full w-full items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <div className="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-2xl">
+                      <div className="flex h-full w-full items-center justify-center rounded-2xl bg-primary/12 text-primary">
                         <Bot className="h-3.5 w-3.5" />
                       </div>
                     </div>
-                    <div className="bg-secondary rounded-2xl rounded-bl-md px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:0ms]" />
-                        <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:150ms]" />
-                        <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:300ms]" />
-                        <span className="text-xs text-muted-foreground ml-1">Thinking...</span>
+                    <div className="rounded-[1.35rem] rounded-bl-md border border-white/90 bg-white/88 px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.08)]">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-primary/35 animate-bounce [animation-delay:0ms]" />
+                        <span className="h-2 w-2 rounded-full bg-primary/35 animate-bounce [animation-delay:150ms]" />
+                        <span className="h-2 w-2 rounded-full bg-primary/35 animate-bounce [animation-delay:300ms]" />
+                        <span className="ml-1 text-xs font-medium text-slate-500">Thinking...</span>
                       </div>
                     </div>
                   </motion.div>
@@ -361,32 +421,30 @@ const Chatbot = () => {
               </div>
             </div>
 
-            {messages.length <= 1 && (
-              <div className="px-4 pb-2">
-                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">Quick Actions</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {quickActions.map((action) => (
-                    <button
-                      key={action}
-                      onClick={() => void sendMessage(action)}
-                      className="text-xs px-3 py-1.5 rounded-full border border-border bg-background text-foreground hover:bg-secondary hover:border-primary/20 transition-all"
-                    >
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {suggestions.length > 0 && (
-              <div className="px-4 pb-2">
-                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">Suggestions</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {suggestions.map((suggestion) => (
+              <div className="border-t border-border/70 bg-white/86 px-4 py-3 backdrop-blur">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Try Next</p>
+                    <p className="mt-0.5 text-xs text-slate-500">Optional follow-ups based on the last answer.</p>
+                  </div>
+                  {suggestions.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllSuggestions((prev) => !prev)}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:border-primary/20 hover:text-primary"
+                    >
+                      {showAllSuggestions ? "Less" : `More ${hiddenSuggestionCount}`}
+                      {showAllSuggestions ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {visibleSuggestions.map((suggestion) => (
                     <button
                       key={suggestion}
                       onClick={() => void sendMessage(suggestion)}
-                      className="text-xs px-3 py-1.5 rounded-full border border-border bg-background text-foreground hover:bg-secondary hover:border-primary/20 transition-all"
+                      className="shrink-0 rounded-full border border-slate-200 bg-slate-50/90 px-3.5 py-2 text-xs font-medium text-slate-700 transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-white hover:text-primary"
                     >
                       {suggestion}
                     </button>
@@ -395,29 +453,38 @@ const Chatbot = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="p-3 border-t border-border bg-card flex gap-2">
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about hostels, payments, bookings..."
-                className="flex-1 rounded-full text-sm h-10 border border-input bg-background px-4 py-2 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus:border-primary/50"
-                disabled={isTyping}
-              />
-              <button
-                type="submit"
-                aria-label="Send Message"
-                disabled={!input.trim() || isTyping}
-                className="h-10 w-10 flex items-center justify-center rounded-full gradient-hero shrink-0 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send className="h-4 w-4 text-primary-foreground" />
-              </button>
-            </form>
+            <div className="border-t border-border/70 bg-white/92 px-4 pb-4 pt-3 backdrop-blur">
+              <form onSubmit={handleSubmit} className="flex items-end gap-2 rounded-[1.5rem] border border-slate-200/80 bg-slate-50/90 p-2 shadow-[0_12px_32px_rgba(148,163,184,0.12)]">
+                <div className="flex-1 px-2">
+                  <div className="mb-1 flex items-center gap-2 text-[11px] font-medium text-slate-500">
+                    <Sparkles className="h-3.5 w-3.5 text-primary/70" />
+                    Ask about hostels, bookings, payments, or support
+                  </div>
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Ask about hostels, payments, bookings..."
+                    className="h-10 w-full bg-transparent px-1 text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                    disabled={isTyping}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  aria-label="Send Message"
+                  disabled={!input.trim() || isTyping}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.1rem] gradient-hero shadow-[0_14px_28px_rgba(12,84,72,0.24)] transition-all hover:-translate-y-0.5 hover:opacity-95 disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
+                >
+                  <Send className="h-4 w-4 text-primary-foreground" />
+                </button>
+              </form>
 
-            <div className="px-4 py-2 border-t border-border bg-secondary/30 text-center">
-              <p className="text-[10px] text-muted-foreground">
-                Powered by <span className="font-semibold text-foreground">Smart Hostel Finder</span> · Live AI assistant
-              </p>
+              <div className="mt-2 flex items-center justify-between px-1 text-[10px] text-slate-400">
+                <p>
+                  Powered by <span className="font-semibold text-slate-600">Smart Hostel Finder</span>
+                </p>
+                <p>Live AI assistant</p>
+              </div>
             </div>
           </motion.div>
         )}
