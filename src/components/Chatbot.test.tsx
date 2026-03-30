@@ -51,6 +51,7 @@ vi.mock("framer-motion", async () => {
 });
 
 const fetchMock = vi.fn<typeof fetch>();
+const writeTextMock = vi.fn<(value: string) => Promise<void>>();
 
 const jsonResponse = (body: unknown, init?: ResponseInit) =>
   new Response(JSON.stringify(body), {
@@ -65,7 +66,14 @@ describe("Chatbot", () => {
   beforeEach(() => {
     mockUser = null;
     fetchMock.mockReset();
+    writeTextMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+    localStorage.clear();
   });
 
   it("restores a saved chat session from the backend", async () => {
@@ -201,5 +209,93 @@ describe("Chatbot", () => {
     expect(screen.getByText("Fallback guidance")).toBeInTheDocument();
     expect(screen.getByText("provider error")).toBeInTheDocument();
     expect(screen.getByText("Based on your student context, your bookings.")).toBeInTheDocument();
+  });
+
+  it("copies a chatbot response to the clipboard", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        sessionId: "session-copy",
+        reply: "Riverside Executive Suites currently has 5 rooms available.",
+        model: "gemini-2.5-flash",
+        provider: "context-direct",
+        usedStub: false,
+        suggestions: [],
+      })
+    );
+    writeTextMock.mockResolvedValueOnce();
+
+    render(<Chatbot />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Open Chat" }));
+    const input = screen.getByPlaceholderText("Ask about hostels, payments, bookings...");
+    fireEvent.change(input, { target: { value: "Are there rooms available at Riverside Executive Suites?" } });
+    await userEvent.click(screen.getByRole("button", { name: "Send Message" }));
+
+    expect(await screen.findByText("Riverside Executive Suites currently has 5 rooms available.")).toBeInTheDocument();
+
+    const copyButtons = screen.getAllByRole("button", { name: /Copy .* message/i });
+    await userEvent.click(copyButtons[copyButtons.length - 1]);
+
+    expect(writeTextMock).toHaveBeenCalledWith("Riverside Executive Suites currently has 5 rooms available.");
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
+  });
+
+  it("lets the user edit a previous prompt and resend it as a fresh branch", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          sessionId: "session-edit-1",
+          reply: "Here are hostels near Kirinyaga University.",
+          model: "gemini-2.5-flash",
+          provider: "context-direct",
+          usedStub: false,
+          suggestions: [],
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          sessionId: "session-edit-2",
+          reply: "Here are hostels in Kerugoya.",
+          model: "gemini-2.5-flash",
+          provider: "context-direct",
+          usedStub: false,
+          suggestions: [],
+        })
+      );
+
+    render(<Chatbot />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Open Chat" }));
+    const input = screen.getByPlaceholderText("Ask about hostels, payments, bookings...");
+    fireEvent.change(input, { target: { value: "Show hostels near Kirinyaga University" } });
+    await userEvent.click(screen.getByRole("button", { name: "Send Message" }));
+
+    expect(await screen.findByText("Here are hostels near Kirinyaga University.")).toBeInTheDocument();
+
+    const editButtons = screen.getAllByRole("button", { name: "Edit prompt" });
+    await userEvent.click(editButtons[editButtons.length - 1]);
+
+    const editingInput = screen.getByPlaceholderText("Ask about hostels, payments, bookings...");
+    expect(editingInput).toHaveValue("Show hostels near Kirinyaga University");
+
+    fireEvent.change(editingInput, { target: { value: "Show hostels in Kerugoya" } });
+    await userEvent.click(screen.getByRole("button", { name: "Save Prompt Edit" }));
+
+    expect(await screen.findByText("Here are hostels in Kerugoya.")).toBeInTheDocument();
+    expect(screen.queryByText("Here are hostels near Kirinyaga University.")).not.toBeInTheDocument();
+
+    const firstPayload = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    const secondPayload = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
+
+    expect(firstPayload.sessionId).toBeNull();
+    expect(secondPayload.sessionId).toBeNull();
+    expect(secondPayload.message).toBe("Show hostels in Kerugoya");
+    expect(secondPayload.history).toEqual([
+      expect.objectContaining({
+        role: "assistant",
+        content: expect.stringContaining("Smart Hostel Finder assistant"),
+      }),
+    ]);
+    expect(localStorage.getItem("shf_chatbot_session_id")).toBe("session-edit-2");
   });
 });

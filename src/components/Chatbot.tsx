@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Bot, User, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageCircle, X, Send, Bot, User, Sparkles, ChevronDown, ChevronUp, Copy, Check, PencilLine } from "lucide-react";
 
 import { useAuth } from "../contexts/AuthContext";
 import { ApiError, api } from "../lib/api";
@@ -86,6 +86,23 @@ const buildAssistantMessage = (
   timestamp: new Date(),
   meta,
 });
+
+const copyToClipboard = async (value: string) => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+};
 
 const sourceLabelMap: Record<string, string> = {
   live_platform_snapshot: "live platform data",
@@ -174,6 +191,8 @@ const Chatbot = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -230,33 +249,52 @@ const Chatbot = () => {
     }
   }, [isOpen]);
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (
+    text: string,
+    options?: {
+      historyOverride?: Array<{ role: "user" | "assistant"; content: string }>;
+      replaceFromIndex?: number | null;
+      sessionIdOverride?: string | null;
+      messageIdOverride?: string;
+    }
+  ) => {
     const trimmedText = text.trim();
     if (!trimmedText) return;
 
     const userMsg: Message = {
-      id: createMessageId(),
+      id: options?.messageIdOverride ?? createMessageId(),
       role: "user",
       content: trimmedText,
       timestamp: new Date(),
     };
 
-    const history = messages.map((message) => ({
-      role: message.role,
-      content: message.content,
-    }));
+    const history =
+      options?.historyOverride ??
+      messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      }));
 
-    setMessages((prev) => [...prev, userMsg]);
+    const replaceFromIndex = options?.replaceFromIndex;
+    const draftSessionId = options?.sessionIdOverride === undefined ? sessionId : options.sessionIdOverride;
+
+    if (replaceFromIndex !== undefined && replaceFromIndex !== null) {
+      setMessages((prev) => [...prev.slice(0, replaceFromIndex), userMsg]);
+    } else {
+      setMessages((prev) => [...prev, userMsg]);
+    }
+
     setInput("");
     setSuggestions([]);
     setShowAllSuggestions(false);
+    setEditingMessageId(null);
     setIsTyping(true);
 
     try {
       const response = await api.post<ChatbotResponse>(
         "/chatbot/message",
         {
-          sessionId,
+          sessionId: draftSessionId,
           message: trimmedText,
           user: user
             ? {
@@ -278,39 +316,92 @@ const Chatbot = () => {
         { timeoutMs: 30000 }
       );
 
-      const nextSessionId = response.sessionId ?? sessionId;
+      const nextSessionId = response.sessionId ?? draftSessionId;
       setSessionId(nextSessionId);
       if (nextSessionId) {
         localStorage.setItem(CHATBOT_SESSION_KEY, nextSessionId);
       }
       setSuggestions(response.suggestions ?? []);
       setShowAllSuggestions(false);
-      setMessages((prev) => [
-        ...prev,
-        buildAssistantMessage(response.reply, {
-          usedFallback: response.usedFallback,
-          fallbackReason: response.fallbackReason,
-          sources: response.sources ?? [],
-        }),
-      ]);
+      const assistantMessage = buildAssistantMessage(response.reply, {
+        usedFallback: response.usedFallback,
+        fallbackReason: response.fallbackReason,
+        sources: response.sources ?? [],
+      });
+      if (replaceFromIndex !== undefined && replaceFromIndex !== null) {
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else {
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
     } catch (error) {
       const message =
         error instanceof ApiError
           ? error.message
           : "The chatbot is unavailable right now. Please try again in a moment.";
 
-      setMessages((prev) => [
-        ...prev,
-        buildAssistantMessage(`I couldn't complete that request right now.\n\n${message}`),
-      ]);
+      const fallbackMessage = buildAssistantMessage(`I couldn't complete that request right now.\n\n${message}`);
+      setMessages((prev) => [...prev, fallbackMessage]);
     } finally {
       setIsTyping(false);
     }
   };
 
+  const handleStartEdit = (messageId: string) => {
+    const target = messages.find((message) => message.id === messageId && message.role === "user");
+    if (!target || isTyping) {
+      return;
+    }
+
+    setEditingMessageId(messageId);
+    setInput(target.content);
+    setSuggestions([]);
+    setShowAllSuggestions(false);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  };
+
+  const handleCopyMessage = async (messageId: string, content: string) => {
+    try {
+      await copyToClipboard(content);
+      setCopiedMessageId(messageId);
+      window.setTimeout(() => {
+        setCopiedMessageId((current) => (current === messageId ? null : current));
+      }, 1800);
+    } catch {
+      setCopiedMessageId(null);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (editingMessageId) {
+      const targetIndex = messages.findIndex((message) => message.id === editingMessageId);
+      if (targetIndex >= 0) {
+        const priorHistory = messages.slice(0, targetIndex).map((message) => ({
+          role: message.role,
+          content: message.content,
+        }));
+        setSessionId(null);
+        localStorage.removeItem(CHATBOT_SESSION_KEY);
+        void sendMessage(input, {
+          historyOverride: priorHistory,
+          replaceFromIndex: targetIndex,
+          sessionIdOverride: null,
+          messageIdOverride: editingMessageId,
+        });
+        return;
+      }
+    }
+
     void sendMessage(input);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setInput("");
+    inputRef.current?.focus();
   };
 
   const formatTime = (date: Date) => {
@@ -491,6 +582,28 @@ const Chatbot = () => {
                           )}
                         </div>
                       )}
+                      <div className="flex items-center gap-1.5 px-1 text-[10px] text-slate-400">
+                        <button
+                          type="button"
+                          onClick={() => void handleCopyMessage(msg.id, msg.content)}
+                          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/80 px-2 py-1 font-medium text-slate-500 transition-colors hover:border-primary/20 hover:text-primary"
+                          aria-label={`Copy ${msg.role} message`}
+                        >
+                          {copiedMessageId === msg.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          {copiedMessageId === msg.id ? "Copied" : "Copy"}
+                        </button>
+                        {msg.role === "user" && !isTyping && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(msg.id)}
+                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/80 px-2 py-1 font-medium text-slate-500 transition-colors hover:border-primary/20 hover:text-primary"
+                            aria-label="Edit prompt"
+                          >
+                            <PencilLine className="h-3 w-3" />
+                            Edit
+                          </button>
+                        )}
+                      </div>
                       <span className="px-1 text-[10px] uppercase tracking-[0.14em] text-slate-400">
                         {formatTime(msg.timestamp)}
                       </span>
@@ -559,7 +672,7 @@ const Chatbot = () => {
                 <div className="flex-1 px-2">
                   <div className="mb-1 flex items-center gap-2 text-[11px] font-medium text-slate-500">
                     <Sparkles className="h-3.5 w-3.5 text-primary/70" />
-                    Ask about hostels, bookings, payments, or support
+                    {editingMessageId ? "Editing your prompt before sending again" : "Ask about hostels, bookings, payments, or support"}
                   </div>
                   <input
                     ref={inputRef}
@@ -570,9 +683,18 @@ const Chatbot = () => {
                     disabled={isTyping}
                   />
                 </div>
+                {editingMessageId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="mb-0.5 inline-flex h-11 items-center justify-center rounded-[1.1rem] border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-800"
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
                   type="submit"
-                  aria-label="Send Message"
+                  aria-label={editingMessageId ? "Save Prompt Edit" : "Send Message"}
                   disabled={!input.trim() || isTyping}
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.1rem] gradient-hero shadow-[0_14px_28px_rgba(12,84,72,0.24)] transition-all hover:-translate-y-0.5 hover:opacity-95 disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
                 >
