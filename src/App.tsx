@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode, useEffect } from 'react';
-import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { applyPortalTheme } from './lib/theme';
@@ -140,7 +140,7 @@ function App() {
     applyPortalTheme();
   }, []);
 
- const Router = import.meta.env.DEV ? BrowserRouter : HashRouter;
+  const Router = BrowserRouter;
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
