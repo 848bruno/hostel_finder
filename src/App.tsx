@@ -140,10 +140,7 @@ function App() {
     applyPortalTheme();
   }, []);
 
-  const Router =
-    typeof window !== 'undefined' && window.location.protocol === 'file:'
-      ? HashRouter
-      : BrowserRouter;
+ const Router = import.meta.env.DEV ? BrowserRouter : HashRouter;
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
