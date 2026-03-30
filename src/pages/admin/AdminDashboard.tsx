@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api } from '../../lib/api';
 import { motion } from 'framer-motion';
 import { Users, Building2, TrendingUp, AlertCircle, ShieldCheck, BarChart3, ArrowUpRight, Activity } from 'lucide-react';
@@ -41,9 +41,10 @@ function StatCard({ title, value, subtext, icon: Icon, variant = 'default' }: {
 }
 
 export function AdminDashboard() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [stats, setStats] = useState<AdminStats>({ totalStudents: 0, totalOwners: 0, approvedOwners: 0, pendingOwners: 0, totalHostels: 0, approvedHostels: 0, pendingHostels: 0 });
 
-  useEffect(() => { loadDashboardData(); }, []);
+  useEffect(() => { loadDashboardData(); }, [refreshVersion]);
 
   const loadDashboardData = async () => {
     try { const data = await api.get<AdminStats>('/admin/stats'); setStats(data); } catch (error) { console.error('Error loading dashboard:', error); }

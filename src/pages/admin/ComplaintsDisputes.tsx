@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, api } from '../../lib/api';
 import { Eye, Plus } from 'lucide-react';
 
@@ -28,6 +28,7 @@ const statusStyles = {
 };
 
 export function ComplaintsDisputes() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [stats, setStats] = useState<ComplaintResponse['stats']>({ open: 0, investigating: 0, resolved: 0 });
   const [loading, setLoading] = useState(true);
@@ -60,7 +61,7 @@ export function ComplaintsDisputes() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [refreshVersion]);
 
   const filtered = useMemo(() => filter === 'all' ? complaints : complaints.filter((complaint) => complaint.status === filter), [complaints, filter]);
 

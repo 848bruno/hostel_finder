@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api } from '../../lib/api';
 import { motion } from 'framer-motion';
 import { Users, Calendar, Building2, Search, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
@@ -26,12 +26,13 @@ const statusConfig: Record<string, { icon: React.ElementType; color: string; bg:
 };
 
 export function TenantList() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [bookings, setBookings] = useState<BookingDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'current' | 'past'>('all');
   const [search, setSearch] = useState('');
 
-  useEffect(() => { loadTenants(); }, []);
+  useEffect(() => { loadTenants(); }, [refreshVersion]);
 
   const loadTenants = async () => {
     try {

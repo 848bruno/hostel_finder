@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, api } from '../../lib/api';
 import { Award, Star, TrendingDown, TrendingUp } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -23,6 +23,7 @@ interface QualityResponse {
 const getScoreColor = (score: number) => score >= 80 ? 'hsl(142, 71%, 40%)' : score >= 60 ? 'hsl(38, 92%, 50%)' : 'hsl(0, 72%, 51%)';
 
 export function QualityScoring() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [data, setData] = useState<QualityResponse>({ scores: [], summary: { averageScore: 0, topRated: 'N/A', belowThreshold: 0 } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,7 +43,7 @@ export function QualityScoring() {
     };
 
     void loadData();
-  }, []);
+  }, [refreshVersion]);
 
   return (
     <DashboardLayout>

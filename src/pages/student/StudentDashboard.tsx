@@ -14,7 +14,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 import { setBookings, type BookingItem } from '../../store/bookingSlice';
@@ -221,6 +221,7 @@ function RecommendedHostelCard({ hostel }: { hostel: BackendHostel }) {
 }
 
 export function StudentDashboard() {
+  const refreshVersion = useDashboardRefreshVersion();
   const { profile } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
   const cachedHostels = useSelector((state: RootState) => state.hostels.list);
@@ -231,7 +232,7 @@ export function StudentDashboard() {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [refreshVersion]);
 
   const loadDashboardData = async () => {
     setLoading(true);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, api, getToken } from '../../lib/api';
 import { AlertCircle, CheckCircle, Clock, Download, Eye, FileText, XCircle } from 'lucide-react';
 
@@ -79,6 +79,7 @@ function formatDate(value?: string | null) {
 }
 
 export function VerifyOwners() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [owners, setOwners] = useState<OwnerRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'pending' | 'all'>('pending');
@@ -101,7 +102,7 @@ export function VerifyOwners() {
 
   useEffect(() => {
     loadOwners();
-  }, []);
+  }, [refreshVersion]);
 
   const pendingOwners = useMemo(
     () => owners.filter((owner) => owner.verification?.status === 'submitted'),

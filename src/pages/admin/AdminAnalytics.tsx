@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api } from '../../lib/api';
 import { TrendingUp, Users, Building2, DollarSign } from 'lucide-react';
 
@@ -11,6 +11,7 @@ interface BookingDoc {
 }
 
 export function AdminAnalytics() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [analytics, setAnalytics] = useState({
     totalUsers: 0,
     totalHostels: 0,
@@ -24,7 +25,7 @@ export function AdminAnalytics() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadAnalytics(); }, []);
+  useEffect(() => { loadAnalytics(); }, [refreshVersion]);
 
   const loadAnalytics = async () => {
     try {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Heart, Loader2, MapPin, Search, Star, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
 
 interface FavoriteHostel {
@@ -24,6 +24,7 @@ function toImageUrl(image?: string) {
 }
 
 export function Favorites() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [favorites, setFavorites] = useState<FavoriteHostel[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export function Favorites() {
 
   useEffect(() => {
     void loadFavorites();
-  }, []);
+  }, [refreshVersion]);
 
   const loadFavorites = async () => {
     setLoading(true);

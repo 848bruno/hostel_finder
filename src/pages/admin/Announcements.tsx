@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, api } from '../../lib/api';
 import { Calendar, Eye, Plus, Save, Send, Users } from 'lucide-react';
 
@@ -21,6 +21,7 @@ const audienceLabels = {
 };
 
 export function Announcements() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,7 +50,7 @@ export function Announcements() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [refreshVersion]);
 
   const resetForm = () => {
     setEditingId(null);

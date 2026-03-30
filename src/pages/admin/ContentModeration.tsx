@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, api } from '../../lib/api';
 import { Building2, Flag, MessageSquare } from 'lucide-react';
 
@@ -34,6 +34,7 @@ const statusStyles = {
 const typeIcons = { listing: Building2, review: MessageSquare };
 
 export function ContentModeration() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [stats, setStats] = useState<ModerationResponse['stats']>({ flagged: 0, pending: 0, approved: 0, removed: 0 });
   const [filter, setFilter] = useState('all');
@@ -56,7 +57,7 @@ export function ContentModeration() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [refreshVersion]);
 
   const filtered = useMemo(() => filter === 'all' ? items : items.filter((item) => item.status === filter), [filter, items]);
 

@@ -17,7 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api } from '../../lib/api';
 import { setHostelList } from '../../store/hostelSlice';
 import type { BackendHostel } from '../../store/hostelSlice';
@@ -326,6 +326,7 @@ function HostelMapView({
 }
 
 export function SearchHostels() {
+  const refreshVersion = useDashboardRefreshVersion();
   const dispatch = useDispatch<AppDispatch>();
   const cachedHostels = useSelector((state: RootState) => state.hostels.list);
   const listLoaded = useSelector((state: RootState) => state.hostels.listLoaded);
@@ -346,6 +347,11 @@ export function SearchHostels() {
   const [favoriteBusyId, setFavoriteBusyId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (refreshVersion > 0) {
+      void loadHostels();
+      return;
+    }
+
     if (listLoaded) {
       setHostels(cachedHostels);
       setLoading(false);
@@ -353,11 +359,11 @@ export function SearchHostels() {
     }
 
     void loadHostels();
-  }, [cachedHostels, listLoaded]);
+  }, [cachedHostels, listLoaded, refreshVersion]);
 
   useEffect(() => {
     void loadFavorites();
-  }, []);
+  }, [refreshVersion]);
 
   const cityOptions = useMemo(
     () =>

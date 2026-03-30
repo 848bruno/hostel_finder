@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, api } from '../../lib/api';
 import { Calendar, FileText, Search, User } from 'lucide-react';
 
@@ -24,6 +24,7 @@ const typeColors: Record<string, string> = {
 };
 
 export function AuditLogs() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -48,7 +49,7 @@ export function AuditLogs() {
 
   useEffect(() => {
     void loadData();
-  }, [search, typeFilter]);
+  }, [search, typeFilter, refreshVersion]);
 
   const types = useMemo(() => ['all', ...Array.from(new Set(logs.map((log) => log.type)))], [logs]);
 

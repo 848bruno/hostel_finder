@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
 import { Users, Search, CheckCircle, XCircle, ShieldCheck, ShieldOff, Trash2 } from 'lucide-react';
 
@@ -15,6 +15,7 @@ interface UserRow {
 }
 
 export function ManageUsers() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,7 +23,7 @@ export function ManageUsers() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => { loadUsers(); }, [refreshVersion]);
 
   const loadUsers = async () => {
     try {

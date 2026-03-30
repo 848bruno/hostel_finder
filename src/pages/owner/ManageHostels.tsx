@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api } from '../../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -27,13 +27,14 @@ interface Hostel {
 }
 
 export function ManageHostels() {
+  const refreshVersion = useDashboardRefreshVersion();
   const navigate = useNavigate();
   const [hostels, setHostels] = useState<Hostel[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending'>('all');
 
-  useEffect(() => { loadHostels(); }, []);
+  useEffect(() => { loadHostels(); }, [refreshVersion]);
 
   const loadHostels = async () => {
     setLoading(true);

@@ -55,6 +55,7 @@ async function request<T>(
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
+      cache: 'no-store',
       body: isFormData
         ? (body as FormData)
         : body !== undefined

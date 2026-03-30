@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
 import { Building2, MapPin, DollarSign, CheckCircle, XCircle, ShieldOff, Trash2 } from 'lucide-react';
 
@@ -19,6 +19,7 @@ interface AdminHostel {
 }
 
 export function AdminHostels() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [pendingHostels, setPendingHostels] = useState<AdminHostel[]>([]);
   const [approvedHostels, setApprovedHostels] = useState<AdminHostel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +27,7 @@ export function AdminHostels() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAll(); }, [refreshVersion]);
 
   const loadAll = async () => {
     setLoading(true);

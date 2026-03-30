@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 import {
@@ -100,6 +100,7 @@ function StatCard({
 }
 
 export function OwnerDashboard() {
+  const refreshVersion = useDashboardRefreshVersion();
   const { profile } = useAuth();
   const [stats, setStats] = useState<OwnerStats>({
     totalHostels: 0, approvedHostels: 0, pendingHostels: 0, totalRooms: 0, availableRooms: 0,
@@ -108,7 +109,7 @@ export function OwnerDashboard() {
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadDashboardData(); }, []);
+  useEffect(() => { loadDashboardData(); }, [refreshVersion]);
 
   const loadDashboardData = async () => {
     setLoading(true);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
 import { setBookings } from '../../store/bookingSlice';
 import type { BookingItem } from '../../store/bookingSlice';
@@ -9,6 +9,7 @@ import type { RootState, AppDispatch } from '../../store';
 import { Calendar, MapPin, DollarSign, FileText, RefreshCw } from 'lucide-react';
 
 export function MyBookings() {
+  const refreshVersion = useDashboardRefreshVersion();
   const dispatch = useDispatch<AppDispatch>();
   const { list: cachedBookings, loaded } = useSelector((state: RootState) => state.bookings);
   const [bookings, setLocalBookings] = useState<BookingItem[]>(cachedBookings);
@@ -20,13 +21,15 @@ export function MyBookings() {
   const [filter, setFilter] = useState<'all' | 'pending_payment' | 'confirmed' | 'cancelled'>('all');
 
   useEffect(() => {
-    if (loaded) {
+    if (refreshVersion > 0) {
+      loadBookings(true);
+    } else if (loaded) {
       setLocalBookings(cachedBookings);
       setLoading(false);
     } else {
       loadBookings();
     }
-  }, []);
+  }, [loaded, cachedBookings, refreshVersion]);
 
   const loadBookings = async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, api } from '../../lib/api';
 import { Headphones, MessageCircle, Plus, Search, User } from 'lucide-react';
 
@@ -32,6 +32,7 @@ const priorityStyles = {
 };
 
 export function SupportTickets() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [stats, setStats] = useState<TicketResponse['stats']>({ open: 0, in_progress: 0, resolved: 0 });
   const [loading, setLoading] = useState(true);
@@ -64,7 +65,7 @@ export function SupportTickets() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [refreshVersion]);
 
   const filtered = useMemo(() => tickets.filter((ticket) => {
     if (filter !== 'all' && ticket.status !== filter) return false;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, getToken, api } from '../../lib/api';
 import { AlertTriangle, Download, FileText, Upload } from 'lucide-react';
 
@@ -49,6 +49,7 @@ async function downloadExport(path: string, fallbackName: string) {
 }
 
 export function BulkDataManagement() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [jobs, setJobs] = useState<BulkImportJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -72,7 +73,7 @@ export function BulkDataManagement() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [refreshVersion]);
 
   const handleImport = async () => {
     if (!file) {

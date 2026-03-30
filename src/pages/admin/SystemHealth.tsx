@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, api } from '../../lib/api';
 import { Activity, AlertTriangle, CheckCircle2, Cpu, Database, HardDrive, Server, Wifi, XCircle } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -43,6 +43,7 @@ const statusConfig = {
 };
 
 export function SystemHealth() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [data, setData] = useState<SystemHealthResponse>({
     summary: { overallUptime: '0%', avgResponse: 0, servicesUp: '0/0', dbSizeGb: 0 },
     uptimeData: [],
@@ -67,7 +68,7 @@ export function SystemHealth() {
     };
 
     void loadData();
-  }, []);
+  }, [refreshVersion]);
 
   return (
     <DashboardLayout>

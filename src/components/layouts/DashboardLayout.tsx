@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
@@ -77,6 +77,12 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
+const DashboardRefreshContext = createContext(0);
+
+export function useDashboardRefreshVersion() {
+  return useContext(DashboardRefreshContext);
+}
+
 interface AnnouncementNotification {
   _id: string;
   title: string;
@@ -100,6 +106,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<AnnouncementNotification[]>([]);
   const [selectedNotification, setSelectedNotification] = useState<AnnouncementNotification | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   const role = (profile?.role as UserRole) || 'student';
   const userName = profile?.username || 'User';
@@ -147,7 +154,40 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     };
 
     void loadNotifications();
-  }, [profile]);
+  }, [profile, refreshVersion]);
+
+  useEffect(() => {
+    let lastHiddenAt = Date.now();
+
+    const triggerRefresh = () => {
+      setRefreshVersion((current) => current + 1);
+    };
+
+    const handleFocus = () => {
+      triggerRefresh();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        lastHiddenAt = Date.now();
+        return;
+      }
+
+      if (Date.now() - lastHiddenAt > 3000) {
+        triggerRefresh();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  const refreshContextValue = useMemo(() => refreshVersion, [refreshVersion]);
 
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
@@ -247,6 +287,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
+    <DashboardRefreshContext.Provider value={refreshContextValue}>
     <div className="min-h-screen flex bg-background">
       {/* Mobile overlay */}
       <AnimatePresence>
@@ -545,5 +586,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         )}
       </AnimatePresence>
     </div>
+    </DashboardRefreshContext.Provider>
   );
 }

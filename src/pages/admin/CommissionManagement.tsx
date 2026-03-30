@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { ApiError, api } from '../../lib/api';
 import { Building2, DollarSign, Percent, Save } from 'lucide-react';
 
@@ -21,6 +21,7 @@ interface CommissionResponse {
 }
 
 export function CommissionManagement() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [data, setData] = useState<CommissionResponse>({ defaultRate: 10, tiers: [], summary: { totalEarned: 0, activeOwners: 0 } });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,7 +42,7 @@ export function CommissionManagement() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [refreshVersion]);
 
   const saveConfig = async () => {
     setSaving(true);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api } from '../../lib/api';
 import { CreditCard, Calendar } from 'lucide-react';
 
@@ -14,11 +14,12 @@ interface BookingDoc {
 }
 
 export function AdminPayments() {
+  const refreshVersion = useDashboardRefreshVersion();
   const [bookings, setBookings] = useState<BookingDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'failed'>('all');
 
-  useEffect(() => { loadPayments(); }, []);
+  useEffect(() => { loadPayments(); }, [refreshVersion]);
 
   const loadPayments = async () => {
     try {
