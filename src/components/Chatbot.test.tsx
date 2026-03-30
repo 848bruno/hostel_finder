@@ -121,6 +121,7 @@ describe("Chatbot", () => {
         provider: "gemini",
         usedStub: false,
         usedFallback: false,
+        sources: ["live_platform_snapshot", "hostel_search"],
         suggestions: ["Filter hostels by city and price", "How does proximity search work?"],
       })
     );
@@ -128,6 +129,7 @@ describe("Chatbot", () => {
     render(<Chatbot />);
 
     await userEvent.click(screen.getByRole("button", { name: "Open Chat" }));
+    expect(screen.getByText(/Show my recent booking guidance/i)).toBeInTheDocument();
     const input = screen.getByPlaceholderText("Ask about hostels, payments, bookings...");
     fireEvent.change(input, { target: { value: "Show me hostels near Kirinyaga University" } });
     expect(input).toHaveValue("Show me hostels near Kirinyaga University");
@@ -148,6 +150,8 @@ describe("Chatbot", () => {
 
     expect(await screen.findByText("You can start by filtering approved hostels near Kirinyaga University.")).toBeInTheDocument();
     expect(screen.getByText("Filter hostels by city and price")).toBeInTheDocument();
+    expect(screen.getByText("Grounded reply")).toBeInTheDocument();
+    expect(screen.getByText("Based on live platform data, hostel search.")).toBeInTheDocument();
     expect(localStorage.getItem("shf_chatbot_session_id")).toBe("session-456");
   });
 
@@ -169,5 +173,33 @@ describe("Chatbot", () => {
 
     expect(await screen.findByText("I couldn't complete that request right now.")).toBeInTheDocument();
     expect(screen.getByText("Chatbot service timed out.")).toBeInTheDocument();
+  });
+
+  it("renders fallback status when the chatbot explicitly marks a response as fallback guidance", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        sessionId: "session-999",
+        reply: "I can help with booking guidance.",
+        model: "gemini-2.5-flash",
+        provider: "gemini-fallback",
+        usedStub: false,
+        usedFallback: true,
+        fallbackReason: "provider_error",
+        sources: ["live_student_context", "recent_bookings"],
+        suggestions: ["Show my recent booking guidance"],
+      })
+    );
+
+    render(<Chatbot />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Open Chat" }));
+    const input = screen.getByPlaceholderText("Ask about hostels, payments, bookings...");
+    fireEvent.change(input, { target: { value: "Show my recent booking guidance" } });
+    await userEvent.click(screen.getByRole("button", { name: "Send Message" }));
+
+    expect(await screen.findByText("I can help with booking guidance.")).toBeInTheDocument();
+    expect(screen.getByText("Fallback guidance")).toBeInTheDocument();
+    expect(screen.getByText("provider error")).toBeInTheDocument();
+    expect(screen.getByText("Based on your student context, your bookings.")).toBeInTheDocument();
   });
 });

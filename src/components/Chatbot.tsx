@@ -10,6 +10,11 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  meta?: {
+    usedFallback?: boolean;
+    fallbackReason?: string | null;
+    sources?: string[];
+  };
 };
 
 type ChatbotResponse = {
@@ -18,7 +23,10 @@ type ChatbotResponse = {
   model: string;
   provider: string;
   usedStub: boolean;
+  usedFallback?: boolean;
+  fallbackReason?: string | null;
   suggestions?: string[];
+  sources?: string[];
 };
 
 type StoredSession = {
@@ -33,14 +41,32 @@ type StoredSession = {
 
 const CHATBOT_SESSION_KEY = "shf_chatbot_session_id";
 
-const quickActions = [
-  "🏠 How do I book a hostel?",
-  "💰 What payment methods?",
-  "❌ How to cancel a booking?",
-  "🛏️ Room types available",
-  "📍 Hostels near Kirinyaga University",
-  "📶 What amenities are common?",
-];
+const quickActionsByRole = {
+  guest: [
+    "🏠 How do I book a hostel?",
+    "💰 What payment methods?",
+    "📍 Hostels near Kirinyaga University",
+    "📶 What amenities are common?",
+  ],
+  student: [
+    "🧾 Show my recent booking guidance",
+    "💳 Why is my payment pending?",
+    "⭐ What are my favorite hostels?",
+    "⚖️ Compare two hostels on price and amenities",
+  ],
+  owner: [
+    "🏢 How many hostels do I have?",
+    "📉 Which of my hostels have low room availability?",
+    "⏳ Which of my hostels are pending approval?",
+    "🔓 Show unpaid bookings I can release",
+  ],
+  admin: [
+    "📊 Show admin dashboard stats",
+    "🧾 How many pending owners are there?",
+    "🏨 How many pending hostels are there?",
+    "🛟 What is the current support load?",
+  ],
+} as const;
 
 const createMessageId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -50,12 +76,51 @@ const createMessageId = () => {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
 
-const buildAssistantMessage = (content: string): Message => ({
+const buildAssistantMessage = (
+  content: string,
+  meta?: Message["meta"]
+): Message => ({
   id: createMessageId(),
   role: "assistant",
   content,
   timestamp: new Date(),
+  meta,
 });
+
+const sourceLabelMap: Record<string, string> = {
+  live_platform_snapshot: "live platform data",
+  resolved_hostel_match: "live hostel data",
+  live_student_context: "your student context",
+  recent_bookings: "your bookings",
+  favorites: "your favorites",
+  payment_methods: "payment rules",
+  live_owner_context: "your owner context",
+  owner_stats: "owner stats",
+  owner_room_stats: "owner room stats",
+  admin_dashboard_stats: "admin dashboard data",
+  university_coverage: "university coverage",
+  city_coverage: "city coverage",
+  hostel_details: "hostel details",
+  hostel_availability: "room availability",
+  hostel_pricing: "hostel pricing",
+  hostel_amenities: "hostel amenities",
+  hostel_location: "hostel location",
+  hostel_rating: "hostel rating",
+};
+
+const describeSources = (sources?: string[]) => {
+  if (!Array.isArray(sources) || sources.length === 0) return null;
+
+  const labels = [...new Set(
+    sources
+      .map((source) => sourceLabelMap[source] || source.replace(/_/g, " "))
+      .filter(Boolean)
+  )].slice(0, 3);
+
+  if (labels.length === 0) return null;
+
+  return `Based on ${labels.join(", ")}.`;
+};
 
 const renderContent = (content: string) => {
   return content.split("\n").map((line, lineIdx) => {
@@ -220,7 +285,14 @@ const Chatbot = () => {
       }
       setSuggestions(response.suggestions ?? []);
       setShowAllSuggestions(false);
-      setMessages((prev) => [...prev, buildAssistantMessage(response.reply)]);
+      setMessages((prev) => [
+        ...prev,
+        buildAssistantMessage(response.reply, {
+          usedFallback: response.usedFallback,
+          fallbackReason: response.fallbackReason,
+          sources: response.sources ?? [],
+        }),
+      ]);
     } catch (error) {
       const message =
         error instanceof ApiError
@@ -255,6 +327,14 @@ const Chatbot = () => {
         : user?.role === "student"
           ? "Student mode"
           : "Guest mode";
+  const roleQuickActions =
+    user?.role === "owner"
+      ? quickActionsByRole.owner
+      : user?.role === "admin"
+        ? quickActionsByRole.admin
+        : user?.role === "student"
+          ? quickActionsByRole.student
+          : quickActionsByRole.guest;
 
   return (
     <>
@@ -341,10 +421,10 @@ const Chatbot = () => {
                       Quick Start
                     </div>
                     <p className="mb-4 max-w-[32ch] text-sm leading-relaxed text-slate-700">
-                      Ask directly, or start with one of these shortcuts to get grounded answers faster.
+                      Ask directly, or start with one of these {userModeLabel.toLowerCase()} shortcuts to get grounded answers faster.
                     </p>
                     <div className="grid grid-cols-2 gap-2">
-                      {quickActions.map((action) => (
+                      {roleQuickActions.map((action) => (
                         <button
                           key={action}
                           onClick={() => void sendMessage(action)}
@@ -390,6 +470,27 @@ const Chatbot = () => {
                       >
                         {renderContent(msg.content)}
                       </div>
+                      {msg.role === "assistant" && msg.meta && (
+                        <div className="flex flex-wrap items-center gap-1.5 px-1 text-[10px] text-slate-500">
+                          {msg.meta.usedFallback ? (
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
+                              Fallback guidance
+                            </span>
+                          ) : msg.meta.sources && msg.meta.sources.length > 0 ? (
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
+                              Grounded reply
+                            </span>
+                          ) : null}
+                          {msg.meta.fallbackReason && (
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-medium text-slate-600">
+                              {msg.meta.fallbackReason.replace(/_/g, " ")}
+                            </span>
+                          )}
+                          {describeSources(msg.meta.sources) && (
+                            <span>{describeSources(msg.meta.sources)}</span>
+                          )}
+                        </div>
+                      )}
                       <span className="px-1 text-[10px] uppercase tracking-[0.14em] text-slate-400">
                         {formatTime(msg.timestamp)}
                       </span>
