@@ -144,20 +144,20 @@ export function StudentSettings() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">Password</h3>
-                      <p className="text-sm text-gray-600">Last changed 30 days ago</p>
+                      <h3 className="font-medium text-foreground">Password</h3>
+                      <p className="text-sm text-muted-foreground">Last changed 30 days ago</p>
                     </div>
                     <button className="px-4 py-2 text-primary hover:bg-primary/10 rounded-lg font-medium">
                       Change
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">Two-Factor Authentication</h3>
-                      <p className="text-sm text-gray-600">Add an extra layer of security</p>
+                      <h3 className="font-medium text-foreground">Two-Factor Authentication</h3>
+                      <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
                     </div>
                     <button className="px-4 py-2 text-primary hover:bg-primary/10 rounded-lg font-medium">
                       Enable
@@ -170,15 +170,15 @@ export function StudentSettings() {
             {activeTab === 'notifications' && (
               <div className="space-y-6 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Notification Preferences</h2>
-                  <p className="text-gray-600">Choose what notifications you want to receive</p>
+                  <h2 className="mb-2 text-xl font-bold text-foreground">Notification Preferences</h2>
+                  <p className="text-muted-foreground">Choose what notifications you want to receive</p>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">Booking Updates</h3>
-                      <p className="text-sm text-gray-600">Get notified about your bookings</p>
+                      <h3 className="font-medium text-foreground">Booking Updates</h3>
+                      <p className="text-sm text-muted-foreground">Get notified about your bookings</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
@@ -186,10 +186,10 @@ export function StudentSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">Payment Confirmations</h3>
-                      <p className="text-sm text-gray-600">Receive payment receipts and confirmations</p>
+                      <h3 className="font-medium text-foreground">Payment Confirmations</h3>
+                      <p className="text-sm text-muted-foreground">Receive payment receipts and confirmations</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
@@ -197,10 +197,10 @@ export function StudentSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">Promotional Emails</h3>
-                      <p className="text-sm text-gray-600">Receive offers and promotions</p>
+                      <h3 className="font-medium text-foreground">Promotional Emails</h3>
+                      <p className="text-sm text-muted-foreground">Receive offers and promotions</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" />
@@ -214,37 +214,37 @@ export function StudentSettings() {
             {activeTab === 'help' && (
               <div className="space-y-6 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Help & Support</h2>
-                  <p className="text-gray-600">Get assistance with your account</p>
+                  <h2 className="mb-2 text-xl font-bold text-foreground">Help & Support</h2>
+                  <p className="text-muted-foreground">Get assistance with your account</p>
                 </div>
 
                 <div className="space-y-4">
-                  <a href="#" className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                  <a href="#" className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:border-blue-300">
                     <div>
-                      <h3 className="font-medium text-gray-900">FAQs</h3>
-                      <p className="text-sm text-gray-600">Find answers to common questions</p>
+                      <h3 className="font-medium text-foreground">FAQs</h3>
+                      <p className="text-sm text-muted-foreground">Find answers to common questions</p>
                     </div>
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </a>
 
-                  <a href="#" className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                  <a href="#" className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:border-blue-300">
                     <div>
-                      <h3 className="font-medium text-gray-900">Contact Support</h3>
-                      <p className="text-sm text-gray-600">Get in touch with our support team</p>
+                      <h3 className="font-medium text-foreground">Contact Support</h3>
+                      <p className="text-sm text-muted-foreground">Get in touch with our support team</p>
                     </div>
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </a>
 
-                  <a href="#" className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                  <a href="#" className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:border-blue-300">
                     <div>
-                      <h3 className="font-medium text-gray-900">Terms of Service</h3>
-                      <p className="text-sm text-gray-600">Read our terms and conditions</p>
+                      <h3 className="font-medium text-foreground">Terms of Service</h3>
+                      <p className="text-sm text-muted-foreground">Read our terms and conditions</p>
                     </div>
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </a>

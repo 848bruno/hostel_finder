@@ -117,7 +117,7 @@ export function Register() {
                     className={`py-3 px-4 rounded-lg border-2 font-medium transition-colors ${
                       role === 'student'
                         ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                        : 'border-input bg-background text-foreground hover:border-primary/40'
                     }`}
                   >
                     Student
@@ -138,7 +138,7 @@ export function Register() {
 
               {/* Username */}
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="username" className="mb-1 block text-sm font-medium text-foreground">
                   Username
                 </label>
                 <input
@@ -148,14 +148,14 @@ export function Register() {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="appearance-none relative block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="relative block w-full appearance-none rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Choose a username"
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="mb-1 block text-sm font-medium text-foreground">
                   Email Address
                 </label>
                 <input
@@ -166,14 +166,14 @@ export function Register() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none relative block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="relative block w-full appearance-none rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter your email"
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="password" className="mb-1 block text-sm font-medium text-foreground">
                   Password
                 </label>
                 <input
@@ -184,14 +184,14 @@ export function Register() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="relative block w-full appearance-none rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Create a password (min. 6 characters)"
                 />
               </div>
 
               {/* Confirm password */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-foreground">
                   Confirm Password
                 </label>
                 <input
@@ -202,7 +202,7 @@ export function Register() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="relative block w-full appearance-none rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Confirm your password"
                 />
               </div>
@@ -210,13 +210,13 @@ export function Register() {
               {/* Business license (owners only) */}
               {role === 'owner' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-foreground">
                     Business License <span className="text-red-500">*</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-primary transition-colors"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-input px-4 py-3 text-muted-foreground transition-colors hover:border-blue-400 hover:text-primary"
                   >
                     <Upload size={20} />
                     {licenseFile ? licenseFile.name : 'Upload business license document'}
@@ -228,7 +228,7 @@ export function Register() {
                     className="hidden"
                     onChange={(e) => setLicenseFile(e.target.files?.[0] ?? null)}
                   />
-                  <p className="text-xs text-gray-500 mt-1">PDF, JPG, or PNG accepted</p>
+                  <p className="mt-1 text-xs text-muted-foreground">PDF, JPG, or PNG accepted</p>
                 </div>
               )}
             </div>
@@ -242,7 +242,7 @@ export function Register() {
             </button>
 
             <div className="text-center">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Already have an account?{' '}
                 <Link to="/login" className="font-medium text-primary hover:text-primary/90">
                   Sign in here

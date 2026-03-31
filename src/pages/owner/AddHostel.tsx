@@ -36,7 +36,7 @@ export function AddHostel() {
     description: '',
     address: '',
     city: '',
-    nearbyUniversity: '',
+    nearbyUniversity: 'Kirinyaga University',
     contactPhone: '',
     hostelType: 'mixed' as 'male' | 'female' | 'mixed',
     totalRooms: 0,
@@ -140,8 +140,8 @@ export function AddHostel() {
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Add New Hostel</h1>
-          <p className="text-gray-600 mt-1">Fill in the details to list your hostel</p>
+          <h1 className="text-3xl font-bold text-foreground">Add New Hostel</h1>
+          <p className="mt-1 text-muted-foreground">Fill in the details to list your hostel</p>
         </div>
 
         {error && (
@@ -150,38 +150,38 @@ export function AddHostel() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Basic Information</h2>
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <h2 className="mb-4 text-xl font-bold text-foreground">Basic Information</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hostel Name <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-sm font-medium text-foreground">Hostel Name <span className="text-red-500">*</span></label>
                 <input type="text" required value={formData.name}
                   onChange={(e) => field('name', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter hostel name" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-sm font-medium text-foreground">Description <span className="text-red-500">*</span></label>
                 <textarea rows={3} required value={formData.description}
                   onChange={(e) => field('description', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Describe your hostel..." />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-sm font-medium text-foreground">Contact Phone <span className="text-red-500">*</span></label>
                 <input type="tel" required value={formData.contactPhone}
                   onChange={(e) => field('contactPhone', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="e.g. +254 700 000000" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hostel Type <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-sm font-medium text-foreground">Hostel Type <span className="text-red-500">*</span></label>
                 <select required value={formData.hostelType}
                   onChange={(e) => field('hostelType', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                  className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
                   <option value="male">Male Only</option>
                   <option value="female">Female Only</option>
                   <option value="mixed">Mixed</option>
@@ -190,31 +190,31 @@ export function AddHostel() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Rooms <span className="text-red-500">*</span></label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">Total Rooms <span className="text-red-500">*</span></label>
                   <input type="number" required min="1" value={formData.totalRooms || ''}
                     onChange={(e) => field('totalRooms', parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Available Rooms <span className="text-red-500">*</span></label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">Available Rooms <span className="text-red-500">*</span></label>
                   <input type="number" required min="0" value={formData.availableRooms || ''}
                     onChange={(e) => field('availableRooms', parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price / Month (KSh) <span className="text-red-500">*</span></label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">Price / Month (KSh) <span className="text-red-500">*</span></label>
                   <input type="number" required min="1" value={formData.pricePerMonth || ''}
                     onChange={(e) => field('pricePerMonth', parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Location — coordinates auto-detected */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Location</h2>
+              <h2 className="text-xl font-bold text-foreground">Location</h2>
               <div className="flex items-center gap-2 text-sm">
                 {geoStatus === 'detecting' && (
                   <><Loader size={14} className="animate-spin text-blue-500" /><span className="text-primary">Detecting coordinates...</span></>
@@ -223,41 +223,41 @@ export function AddHostel() {
                   <><CheckCircle size={14} className="text-green-500" /><span className="text-green-600">Coordinates detected</span></>
                 )}
                 {geoStatus === 'not_found' && (
-                  <><MapPin size={14} className="text-gray-400" /><span className="text-gray-500">Address not found on map (will save without coordinates)</span></>
+                  <><MapPin size={14} className="text-muted-foreground" /><span className="text-muted-foreground">Address not found on map (will save without coordinates)</span></>
                 )}
               </div>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Street Address <span className="text-red-500">*</span></label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">Street Address <span className="text-red-500">*</span></label>
                   <input type="text" required value={formData.address}
                     onChange={(e) => field('address', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="e.g. Kimathi Street, Nairobi" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City <span className="text-red-500">*</span></label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">City <span className="text-red-500">*</span></label>
                   <input type="text" required value={formData.city}
                     onChange={(e) => field('city', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="e.g. Nairobi" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nearby University / Campus</label>
+                <label className="mb-1 block text-sm font-medium text-foreground">Nearby University / Campus</label>
                 <input type="text" value={formData.nearbyUniversity}
                   onChange={(e) => field('nearbyUniversity', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g. University of Nairobi" />
+                  className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="e.g. Kirinyaga University" />
               </div>
             </div>
           </div>
 
           {/* Images */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-1">Photos</h2>
-            <p className="text-sm text-gray-500 mb-4">Upload up to 10 photos of your hostel (JPEG, PNG, WebP · max 5 MB each)</p>
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <h2 className="mb-1 text-xl font-bold text-foreground">Photos</h2>
+            <p className="mb-4 text-sm text-muted-foreground">Upload up to 10 photos of your hostel (JPEG, PNG, WebP · max 5 MB each)</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -270,7 +270,7 @@ export function AddHostel() {
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-4">
                 {imagePreviews.map((src, idx) => (
                   <div key={idx} className="relative group aspect-square">
-                    <img src={src} alt={`preview-${idx}`} className="w-full h-full object-cover rounded-lg border border-gray-200" />
+                    <img src={src} alt={`preview-${idx}`} className="h-full w-full rounded-lg border border-border object-cover" />
                     <button
                       type="button"
                       onClick={() => removeImage(idx)}
@@ -286,7 +286,7 @@ export function AddHostel() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg hover:border-blue-400 hover:text-primary transition-colors"
+                className="flex items-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-2 text-muted-foreground transition-colors hover:border-blue-400 hover:text-primary"
               >
                 <ImagePlus size={18} />
                 {selectedImages.length === 0 ? 'Add Photos' : `Add More (${selectedImages.length}/10)`}
@@ -295,8 +295,8 @@ export function AddHostel() {
           </div>
 
           {/* Amenities */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Amenities</h2>
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <h2 className="mb-4 text-xl font-bold text-foreground">Amenities</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {([
                 { key: 'wifi', label: 'WiFi' },
@@ -308,12 +308,12 @@ export function AddHostel() {
                 { key: 'kitchen', label: 'Kitchen' },
                 { key: 'airCondition', label: 'Air Conditioning' },
               ] as const).map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <label key={key} className="flex cursor-pointer items-center gap-2 rounded-lg border border-border p-3 hover:bg-accent/40">
                   <input type="checkbox"
                     checked={formData[key]}
                     onChange={(e) => field(key, e.target.checked)}
                     className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" />
-                  <span className="text-sm text-gray-700">{label}</span>
+                  <span className="text-sm text-foreground">{label}</span>
                 </label>
               ))}
             </div>
@@ -321,7 +321,7 @@ export function AddHostel() {
 
           <div className="flex gap-4">
             <button type="button" onClick={() => navigate('/owner/hostels')}
-              className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+              className="flex-1 rounded-lg border border-input py-3 font-medium text-foreground transition-colors hover:bg-accent/40">
               Cancel
             </button>
             <button type="submit" disabled={saving}

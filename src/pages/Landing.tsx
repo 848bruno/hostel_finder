@@ -347,7 +347,7 @@ export default function Landing() {
                 </div>
                 <div className="flex justify-end">
                   <div className="gradient-hero rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[80%]">
-                    <p className="text-sm text-primary-foreground">I&apos;m at Kenyatta University. Budget under KES 8,000</p>
+                    <p className="text-sm text-primary-foreground">I&apos;m at Kirinyaga University. Budget under KES 8,000</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -355,7 +355,7 @@ export default function Landing() {
                     <Bot size={12} className="text-primary-foreground" />
                   </div>
                   <div className="bg-secondary rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-[80%]">
-                    <p className="text-sm text-foreground">I found 5 hostels under KES 8,000 near KU! 🏠 Shall I show them on the map?</p>
+                    <p className="text-sm text-foreground">I found hostels under KES 8,000 near Kirinyaga University. 🏠 Shall I show them on the map?</p>
                   </div>
                 </div>
               </div>
@@ -379,8 +379,8 @@ export default function Landing() {
               </p>
               <ul className="space-y-3 mb-8">
                 {[
-                  '"Find hostels near JKUAT under KES 7,000 with WiFi"',
-                  '"Which hostels near Moi University have vacancies?"',
+                  '"Find hostels near Kirinyaga University under KES 7,000 with WiFi"',
+                  '"Which hostels near Kirinyaga University have vacancies?"',
                   '"Compare the top-rated hostels near my campus"',
                   'Available 24/7—no waiting for office hours',
                 ].map((item) => (

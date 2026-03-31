@@ -196,12 +196,12 @@ export function Payment() {
     return (
       <DashboardLayout>
         <div className="max-w-md mx-auto mt-12 text-center space-y-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full">
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
             <RefreshCw className="text-green-600 animate-spin" size={40} />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Waiting for Payment</h2>
-            <p className="text-gray-600">{stkMessage}</p>
+            <h2 className="mb-2 text-2xl font-bold text-foreground">Waiting for Payment</h2>
+            <p className="text-muted-foreground">{stkMessage}</p>
           </div>
           <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-sm text-primary text-left space-y-1">
             <p className="font-semibold">What to do:</p>
@@ -211,7 +211,7 @@ export function Payment() {
               <li>Wait for confirmation — this page updates automatically</li>
             </ol>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             Checking status automatically… ({pollCount} check{pollCount !== 1 ? 's' : ''} so far)
           </p>
         </div>
@@ -233,39 +233,39 @@ export function Payment() {
     <DashboardLayout>
       <div className="max-w-2xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Complete Payment</h1>
-          <p className="text-gray-600 mt-1">Secure your booking with payment</p>
+          <h1 className="text-3xl font-bold text-foreground">Complete Payment</h1>
+          <p className="mt-1 text-muted-foreground">Secure your booking with payment</p>
         </div>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Booking Summary</h2>
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-bold text-foreground">Booking Summary</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Hostel:</span>
-              <span className="font-semibold text-gray-900">{booking.hostel.name}</span>
+              <span className="text-muted-foreground">Hostel:</span>
+              <span className="font-semibold text-foreground">{booking.hostel.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Rooms:</span>
-              <span className="font-semibold text-gray-900">{booking.roomsBooked}</span>
+              <span className="text-muted-foreground">Rooms:</span>
+              <span className="font-semibold text-foreground">{booking.roomsBooked}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Check-in:</span>
-              <span className="font-semibold text-gray-900">
+              <span className="text-muted-foreground">Check-in:</span>
+              <span className="font-semibold text-foreground">
                 {new Date(booking.startDate).toLocaleDateString()}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Check-out:</span>
-              <span className="font-semibold text-gray-900">
+              <span className="text-muted-foreground">Check-out:</span>
+              <span className="font-semibold text-foreground">
                 {new Date(booking.endDate).toLocaleDateString()}
               </span>
             </div>
-            <div className="pt-3 border-t border-gray-200 flex justify-between">
-              <span className="text-lg font-bold text-gray-900">Total Amount:</span>
+            <div className="flex justify-between border-t border-border pt-3">
+              <span className="text-lg font-bold text-foreground">Total Amount:</span>
               <span className="text-lg font-bold text-green-600">
                 KSh {booking.amount.toLocaleString()}
               </span>
@@ -273,26 +273,26 @@ export function Payment() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Payment Method</h2>
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-bold text-foreground">Payment Method</h2>
           <div className="space-y-3 mb-6">
             <div className={`w-full flex items-center gap-4 p-4 border-2 rounded-lg ${
-              booking.payment.method === 'mpesa' ? 'border-primary bg-primary/10' : 'border-gray-200'
+              booking.payment.method === 'mpesa' ? 'border-primary bg-primary/10' : 'border-border bg-background'
             }`}>
-              <Smartphone className={booking.payment.method === 'mpesa' ? 'text-primary' : 'text-gray-400'} />
+              <Smartphone className={booking.payment.method === 'mpesa' ? 'text-primary' : 'text-muted-foreground'} />
               <div className="flex-1 text-left">
-                <div className="font-semibold text-gray-900">M-Pesa</div>
-                <div className="text-sm text-gray-600">Pay with your mobile money</div>
+                <div className="font-semibold text-foreground">M-Pesa</div>
+                <div className="text-sm text-muted-foreground">Pay with your mobile money</div>
               </div>
               {booking.payment.method === 'mpesa' && <Check className="text-primary" />}
             </div>
             <div className={`w-full flex items-center gap-4 p-4 border-2 rounded-lg ${
-              booking.payment.method === 'card' ? 'border-primary bg-primary/10' : 'border-gray-200'
+              booking.payment.method === 'card' ? 'border-primary bg-primary/10' : 'border-border bg-background'
             }`}>
-              <CreditCard className={booking.payment.method === 'card' ? 'text-primary' : 'text-gray-400'} />
+              <CreditCard className={booking.payment.method === 'card' ? 'text-primary' : 'text-muted-foreground'} />
               <div className="flex-1 text-left">
-                <div className="font-semibold text-gray-900">Credit/Debit Card</div>
-                <div className="text-sm text-gray-600">Pay with Visa or Mastercard</div>
+                <div className="font-semibold text-foreground">Credit/Debit Card</div>
+                <div className="text-sm text-muted-foreground">Pay with Visa or Mastercard</div>
               </div>
               {booking.payment.method === 'card' && <Check className="text-primary" />}
             </div>
@@ -300,7 +300,7 @@ export function Payment() {
 
           {booking.payment.method === 'mpesa' && (
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="mb-2 block text-sm font-medium text-foreground">
                 M-Pesa Phone Number
               </label>
               <input
@@ -308,7 +308,7 @@ export function Payment() {
                 placeholder="07XXXXXXXX"
                 value={mpesaPhone}
                 onChange={(e) => setMpesaPhone(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           )}
@@ -321,7 +321,7 @@ export function Payment() {
             {processing ? 'Processing...' : `Pay KSh ${booking.amount.toLocaleString()}`}
           </button>
 
-          <p className="text-xs text-gray-500 text-center mt-4">
+          <p className="mt-4 text-center text-xs text-muted-foreground">
             Your payment information is secure and encrypted
           </p>
         </div>

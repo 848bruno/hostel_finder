@@ -44,12 +44,12 @@ export function OwnerSettings() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600 mt-1">Manage your account and business preferences</p>
+          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+          <p className="mt-1 text-muted-foreground">Manage your account and business preferences</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="flex border-b border-gray-200 overflow-x-auto">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <div className="flex overflow-x-auto border-b border-border">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -59,7 +59,7 @@ export function OwnerSettings() {
                   className={`flex items-center gap-2 px-6 py-4 font-medium whitespace-nowrap transition-colors ${
                     activeTab === tab.id
                       ? 'text-primary border-b-2 border-primary'
-                      : 'text-gray-600 hover:text-gray-900'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Icon size={20} />
@@ -73,7 +73,7 @@ export function OwnerSettings() {
             {activeTab === 'profile' && (
               <div className="space-y-6 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">Business Profile</h2>
+                  <h2 className="mb-4 text-xl font-bold text-foreground">Business Profile</h2>
                   {message && (
                     <div className={`p-4 rounded-lg mb-4 ${
                       message.includes('success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
@@ -84,38 +84,38 @@ export function OwnerSettings() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-foreground">
                     Email
                   </label>
                   <input
                     type="email"
                     value={profile?.email}
                     disabled
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                    className="w-full rounded-lg border border-input bg-muted px-4 py-2 text-muted-foreground"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-foreground">
                     Full Name / Business Name
                   </label>
                   <input
                     type="text"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-foreground">
                     Phone Number
                   </label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
@@ -132,25 +132,25 @@ export function OwnerSettings() {
             {activeTab === 'security' && (
               <div className="space-y-6 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Security Settings</h2>
-                  <p className="text-gray-600">Manage your password and security preferences</p>
+                  <h2 className="mb-2 text-xl font-bold text-foreground">Security Settings</h2>
+                  <p className="text-muted-foreground">Manage your password and security preferences</p>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">Password</h3>
-                      <p className="text-sm text-gray-600">Change your account password</p>
+                      <h3 className="font-medium text-foreground">Password</h3>
+                      <p className="text-sm text-muted-foreground">Change your account password</p>
                     </div>
                     <button className="px-4 py-2 text-primary hover:bg-primary/10 rounded-lg font-medium">
                       Change
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">Two-Factor Authentication</h3>
-                      <p className="text-sm text-gray-600">Add an extra layer of security</p>
+                      <h3 className="font-medium text-foreground">Two-Factor Authentication</h3>
+                      <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
                     </div>
                     <button className="px-4 py-2 text-primary hover:bg-primary/10 rounded-lg font-medium">
                       Enable
@@ -163,15 +163,15 @@ export function OwnerSettings() {
             {activeTab === 'notifications' && (
               <div className="space-y-6 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Notification Preferences</h2>
-                  <p className="text-gray-600">Choose what notifications you want to receive</p>
+                  <h2 className="mb-2 text-xl font-bold text-foreground">Notification Preferences</h2>
+                  <p className="text-muted-foreground">Choose what notifications you want to receive</p>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">New Bookings</h3>
-                      <p className="text-sm text-gray-600">Get notified when students book your hostels</p>
+                      <h3 className="font-medium text-foreground">New Bookings</h3>
+                      <p className="text-sm text-muted-foreground">Get notified when students book your hostels</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
@@ -179,10 +179,10 @@ export function OwnerSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">Payment Notifications</h3>
-                      <p className="text-sm text-gray-600">Receive notifications about payments</p>
+                      <h3 className="font-medium text-foreground">Payment Notifications</h3>
+                      <p className="text-sm text-muted-foreground">Receive notifications about payments</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
@@ -190,10 +190,10 @@ export function OwnerSettings() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
                     <div>
-                      <h3 className="font-medium text-gray-900">Inquiries</h3>
-                      <p className="text-sm text-gray-600">Get notified when students send inquiries</p>
+                      <h3 className="font-medium text-foreground">Inquiries</h3>
+                      <p className="text-sm text-muted-foreground">Get notified when students send inquiries</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
@@ -207,8 +207,8 @@ export function OwnerSettings() {
             {activeTab === 'payout' && (
               <div className="space-y-6 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Payout Settings</h2>
-                  <p className="text-gray-600">Manage how you receive payments</p>
+                  <h2 className="mb-2 text-xl font-bold text-foreground">Payout Settings</h2>
+                  <p className="text-muted-foreground">Manage how you receive payments</p>
                 </div>
 
                 <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">

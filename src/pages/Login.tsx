@@ -87,8 +87,8 @@ export function Login() {
             <div className="mx-auto h-16 w-16 bg-primary/20 rounded-full flex items-center justify-center">
               <LogIn className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="mt-6 text-3xl font-bold text-gray-900">Welcome Back</h2>
-            <p className="mt-2 text-gray-600">Sign in to your account to continue</p>
+            <h2 className="mt-6 text-3xl font-bold text-foreground">Welcome Back</h2>
+            <p className="mt-2 text-muted-foreground">Sign in to your account to continue</p>
           </div>
 
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -100,7 +100,7 @@ export function Login() {
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="mb-1 block text-sm font-medium text-foreground">
                   Email Address
                 </label>
                 <input
@@ -111,13 +111,13 @@ export function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none relative block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="relative block w-full appearance-none rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter your email"
                 />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="password" className="block text-sm font-medium text-foreground">
                     Password
                   </label>
                   <Link
@@ -135,7 +135,7 @@ export function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-4 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="relative block w-full appearance-none rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter your password"
                 />
               </div>
@@ -151,10 +151,10 @@ export function Login() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
 
@@ -162,7 +162,7 @@ export function Login() {
             <div ref={googleBtnRef} className="flex justify-center" />
 
             <div className="text-center">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Don't have an account?{' '}
                 <Link to="/register" className="font-medium text-primary hover:text-primary/90">
                   Register here

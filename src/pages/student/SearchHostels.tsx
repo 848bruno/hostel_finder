@@ -65,10 +65,12 @@ const sortLabels: Record<SortOption, string> = {
   distance: 'Nearest First',
 };
 
+const DEFAULT_PRIMARY_UNIVERSITY = 'Kirinyaga University';
+
 const createDefaultFilters = (): SearchFilters => ({
   hostelType: 'all',
   city: 'all',
-  university: 'all',
+  university: DEFAULT_PRIMARY_UNIVERSITY,
   minPrice: '',
   maxPrice: '',
   maxDistance: '',
@@ -377,11 +379,18 @@ export function SearchHostels() {
     () =>
       [
         ...new Set(
-          hostels
-            .map((hostel) => hostel.location?.nearbyUniversity)
-            .filter(Boolean as unknown as (value: string | undefined) => value is string)
+          [
+            DEFAULT_PRIMARY_UNIVERSITY,
+            ...hostels
+              .map((hostel) => hostel.location?.nearbyUniversity)
+              .filter(Boolean as unknown as (value: string | undefined) => value is string),
+          ]
         ),
-      ].sort((a, b) => a.localeCompare(b)),
+      ].sort((a, b) => {
+        if (a === DEFAULT_PRIMARY_UNIVERSITY) return -1;
+        if (b === DEFAULT_PRIMARY_UNIVERSITY) return 1;
+        return a.localeCompare(b);
+      }),
     [hostels]
   );
 
