@@ -4,7 +4,7 @@ import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
 import { CreditCard, Smartphone, Check, RefreshCw } from 'lucide-react';
 
-const PAYMENT_REQUEST_TIMEOUT_MS = 30000;
+const PAYMENT_REQUEST_TIMEOUT_MS = 120000; // 120 seconds for payment ops
 
 interface BookingDoc {
   _id: string;
@@ -17,9 +17,30 @@ interface BookingDoc {
   status: string;
 }
 
+interface PaymentStatusResponse {
+  booking: BookingDoc;
+  latestTransaction: {
+    status: 'initiated' | 'pending' | 'succeeded' | 'failed' | 'cancelled';
+    failureReason?: string;
+  } | null;
+}
+
 const isBookingConfirmed = (booking: BookingDoc | null | undefined) => (
   booking?.status === 'confirmed' && booking.payment?.status === 'paid'
 );
+
+/**
+ * Helper to format phone number to 254XXXXXXXXX
+ */
+const formatPhoneNumber = (phone: string) => {
+  let cleaned = phone.replace(/\D/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '254' + cleaned.substring(1);
+  } else if (cleaned.startsWith('7') || cleaned.startsWith('1')) {
+    cleaned = '254' + cleaned;
+  }
+  return cleaned;
+};
 
 export function Payment() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -29,13 +50,17 @@ export function Payment() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [mpesaPhone, setMpesaPhone] = useState('');
+  
   // M-Pesa polling state
   const [stkPending, setStkPending] = useState(false);
   const [stkMessage, setStkMessage] = useState('');
   const [pollCount, setPollCount] = useState(0);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { if (bookingId) loadBooking(); }, [bookingId]);
+  useEffect(() => { 
+    if (bookingId) loadBooking(); 
+    return () => { if (pollTimerRef.current) clearTimeout(pollTimerRef.current); };
+  }, [bookingId]);
 
   const loadBooking = async () => {
     try {
@@ -63,120 +88,75 @@ export function Payment() {
     pollTimerRef.current = setTimeout(() => pollMpesaStatus(0), 3000);
   };
 
-  const reconcileBookingState = async () => {
-    if (!bookingId) {
-      return { state: 'unknown' as const, booking: null };
-    }
-
-    try {
-      const latestBooking = await api.get<BookingDoc>(`/bookings/${bookingId}`, {
-        timeoutMs: PAYMENT_REQUEST_TIMEOUT_MS,
-      });
-
-      setBooking(latestBooking);
-
-      if (isBookingConfirmed(latestBooking)) {
-        navigate(`/student/payment-success/${bookingId}`, { replace: true });
-        return { state: 'confirmed' as const, booking: latestBooking };
-      }
-
-      if (latestBooking.payment?.status === 'failed') {
-        return { state: 'failed' as const, booking: latestBooking };
-      }
-
-      if (latestBooking.payment?.method === 'mpesa' && latestBooking.payment?.status === 'pending') {
-        return { state: 'pending' as const, booking: latestBooking };
-      }
-
-      return { state: 'unknown' as const, booking: latestBooking };
-    } catch {
-      return { state: 'unknown' as const, booking: null };
-    }
-  };
-
-  // Clean up polling timer on unmount
-  useEffect(() => () => { if (pollTimerRef.current) clearTimeout(pollTimerRef.current); }, []);
-
   const pollMpesaStatus = async (count: number) => {
+    // Stop polling after ~2 minutes (40 attempts * 3 seconds)
     if (count > 40) {
-      const reconciled = await reconcileBookingState();
-      if (reconciled.state !== 'confirmed') {
-        setStkPending(false);
-        setProcessing(false);
-        setError('Payment confirmation is taking longer than expected. Refresh My Bookings in a moment before retrying.');
-      }
+      setStkPending(false);
+      setProcessing(false);
+      setError('Payment confirmation is taking longer than expected. Please check "My Bookings" in a few minutes.');
       return;
     }
-    try {
-      const result = await api.post<{
-        confirmed?: boolean;
-        pending?: boolean;
-        failed?: boolean;
-        message?: string;
-      }>(`/bookings/${bookingId}/verify-mpesa`, {}, { timeoutMs: PAYMENT_REQUEST_TIMEOUT_MS });
 
-      if (result.confirmed) {
+    try {
+      const result = await api.get<PaymentStatusResponse>(`/payments/${bookingId}/status`);
+
+      // If booking is marked paid/confirmed by the webhook
+      if (isBookingConfirmed(result.booking)) {
         navigate(`/student/payment-success/${bookingId}`);
         return;
       }
-      if (result.failed) {
-        const reconciled = await reconcileBookingState();
-        if (reconciled.state !== 'confirmed') {
-          setStkPending(false);
-          setProcessing(false);
-          setError(result.message || 'Payment failed. Please try again.');
-        }
+
+      // If the transaction specifically failed
+      if (result.latestTransaction?.status === 'failed') {
+        setStkPending(false);
+        setProcessing(false);
+        setError(result.latestTransaction.failureReason || 'Payment failed or was cancelled.');
         return;
       }
+
       // Still pending — schedule next poll
       setPollCount(count + 1);
       pollTimerRef.current = setTimeout(() => pollMpesaStatus(count + 1), 3000);
-    } catch {
-      // Network error — retry
+    } catch (err) {
+      // On network error, keep trying until timeout
       pollTimerRef.current = setTimeout(() => pollMpesaStatus(count + 1), 3000);
     }
   };
 
   const handlePayment = async () => {
-    if (!booking) return;
+    if (!booking || !bookingId) return;
+    
     setProcessing(true);
     setError('');
-    try {
-      if (booking.payment.method === 'mpesa') {
-        const result = await api.post<{
-          stkPending?: boolean;
-          message?: string;
-          confirmed?: boolean;
-        }>(`/bookings/${bookingId}/confirm-payment`, { phone: mpesaPhone }, { timeoutMs: PAYMENT_REQUEST_TIMEOUT_MS });
 
-        if (result.stkPending) {
-          startMpesaPolling(result.message);
-          return;
-        }
-        // Immediately confirmed (shouldn't happen for mpesa but handle gracefully)
-        navigate(`/student/payment-success/${bookingId}`);
+    try {
+      const formattedPhone = booking.payment.method === 'mpesa' 
+        ? formatPhoneNumber(mpesaPhone) 
+        : undefined;
+
+      if (booking.payment.method === 'mpesa' && (!formattedPhone || formattedPhone.length !== 12)) {
+        throw new Error('Please enter a valid M-Pesa phone number.');
+      }
+
+      // Initialize transaction on backend
+      const result = await api.post<{
+        message: string;
+        transaction: { status: string; providerCheckoutId?: string };
+      }>('/payments/initialize', {
+        bookingId,
+        provider: booking.payment.method,
+        phoneNumber: formattedPhone,
+        idempotencyKey: `pay_${bookingId}_${Date.now()}`
+      });
+
+      if (booking.payment.method === 'mpesa') {
+        startMpesaPolling('STK Push sent. Check your phone to enter your PIN.');
       } else {
-        await api.post(`/bookings/${bookingId}/confirm-payment`, {
-          paymentReference: `CARD-${Date.now()}`,
-        }, { timeoutMs: PAYMENT_REQUEST_TIMEOUT_MS });
+        // Handle Credit Card success/redirect if applicable
         navigate(`/student/payment-success/${bookingId}`);
       }
     } catch (err) {
-      const apiError = err instanceof ApiError ? err : null;
-
-      if (booking.payment.method === 'mpesa') {
-        const reconciled = await reconcileBookingState();
-        if (reconciled.state === 'confirmed') {
-          return;
-        }
-
-        if (reconciled.state === 'pending') {
-          startMpesaPolling('M-Pesa prompt may already have been sent. Complete the payment on your phone.');
-          return;
-        }
-      }
-
-      setError(apiError ? apiError.message : 'Payment failed. Please try again.');
+      setError(err instanceof ApiError ? err.message : (err as Error).message || 'Payment initialization failed.');
       setProcessing(false);
     }
   };
@@ -191,7 +171,6 @@ export function Payment() {
     );
   }
 
-  // M-Pesa STK push sent — show waiting screen
   if (stkPending) {
     return (
       <DashboardLayout>
@@ -223,7 +202,7 @@ export function Payment() {
     return (
       <DashboardLayout>
         <div className="text-center py-12">
-          <p className="text-red-600">Booking not found</p>
+          <p className="text-red-600 font-medium">Booking not found or has been removed.</p>
         </div>
       </DashboardLayout>
     );
@@ -238,7 +217,9 @@ export function Payment() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            {error}
+          </div>
         )}
 
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
@@ -286,7 +267,8 @@ export function Payment() {
               </div>
               {booking.payment.method === 'mpesa' && <Check className="text-primary" />}
             </div>
-            <div className={`w-full flex items-center gap-4 p-4 border-2 rounded-lg ${
+            
+            <div className={`w-full flex items-center gap-4 p-4 border-2 rounded-lg opacity-60 ${
               booking.payment.method === 'card' ? 'border-primary bg-primary/10' : 'border-border bg-background'
             }`}>
               <CreditCard className={booking.payment.method === 'card' ? 'text-primary' : 'text-muted-foreground'} />
@@ -305,10 +287,10 @@ export function Payment() {
               </label>
               <input
                 type="tel"
-                placeholder="07XXXXXXXX"
+                placeholder="07XXXXXXXX or 2547XXXXXXXX"
                 value={mpesaPhone}
                 onChange={(e) => setMpesaPhone(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               />
             </div>
           )}
@@ -316,13 +298,20 @@ export function Payment() {
           <button
             onClick={handlePayment}
             disabled={processing || (booking.payment.method === 'mpesa' && !mpesaPhone)}
-            className="w-full py-4 bg-primary text-white rounded-lg hover:bg-primary/90 font-semibold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-primary text-white rounded-lg hover:bg-primary/90 font-semibold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
           >
-            {processing ? 'Processing...' : `Pay KSh ${booking.amount.toLocaleString()}`}
+            {processing ? (
+              <span className="flex items-center justify-center gap-2">
+                <RefreshCw className="animate-spin" size={20} />
+                Processing...
+              </span>
+            ) : (
+              `Pay KSh ${booking.amount.toLocaleString()}`
+            )}
           </button>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            Your payment information is secure and encrypted
+            Your payment information is secure and encrypted via SSL.
           </p>
         </div>
       </div>
