@@ -17,6 +17,7 @@ import {
 import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
+import { toMediaUrl } from '../../lib/media';
 import { setBookings, type BookingItem } from '../../store/bookingSlice';
 import { setHostelList, type BackendHostel } from '../../store/hostelSlice';
 import type { AppDispatch, RootState } from '../../store';
@@ -132,7 +133,7 @@ function RecommendedHostelCard({ hostel }: { hostel: BackendHostel }) {
       <div className="relative h-52 overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600">
         {hostel.images?.[0] ? (
           <img
-            src={hostel.images[0]}
+            src={toMediaUrl(hostel.images[0])}
             alt={hostel.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
+import { toMediaUrl } from '../../lib/media';
 import { Building2, MapPin, DollarSign, CheckCircle, XCircle, ShieldOff, Trash2 } from 'lucide-react';
 
 interface AdminHostel {
@@ -146,7 +147,7 @@ export function AdminHostels() {
               <div key={hostel._id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="h-40 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white overflow-hidden">
                   {hostel.images && hostel.images.length > 0
-                    ? <img src={hostel.images[0]} alt={hostel.name} className="w-full h-full object-cover" />
+                    ? <img src={toMediaUrl(hostel.images[0])} alt={hostel.name} className="w-full h-full object-cover" />
                     : <Building2 size={56} />}
                 </div>
                 <div className="p-4">

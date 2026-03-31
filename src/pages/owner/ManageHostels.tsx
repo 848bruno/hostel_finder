@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api } from '../../lib/api';
+import { toMediaUrl } from '../../lib/media';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PlusCircle, Edit, Trash2, Eye, EyeOff, Search, Building2,
@@ -143,7 +144,7 @@ export function ManageHostels() {
                     {/* Image / Placeholder */}
                     <div className="lg:w-56 h-40 lg:h-auto bg-gradient-to-br from-primary/15 to-accent/10 flex items-center justify-center shrink-0 overflow-hidden">
                       {hostel.images?.[0] ? (
-                        <img src={hostel.images[0]} alt={hostel.name} className="w-full h-full object-cover" />
+                        <img src={toMediaUrl(hostel.images[0])} alt={hostel.name} className="w-full h-full object-cover" />
                       ) : (
                         <Building2 size={40} className="text-primary/40" />
                       )}

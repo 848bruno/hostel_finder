@@ -3,6 +3,7 @@ import { Heart, Loader2, MapPin, Search, Star, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout, useDashboardRefreshVersion } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
+import { toMediaUrl } from '../../lib/media';
 
 interface FavoriteHostel {
   _id: string;
@@ -12,15 +13,6 @@ interface FavoriteHostel {
   availableRooms?: number;
   averageRating?: number;
   images?: string[];
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5100/api';
-const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
-
-function toImageUrl(image?: string) {
-  if (!image) return '';
-  if (/^https?:\/\//i.test(image)) return image;
-  return `${API_ORIGIN}/${image.replace(/^\/+/, '')}`;
 }
 
 export function Favorites() {
@@ -98,7 +90,7 @@ export function Favorites() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {favorites.map((hostel) => {
-              const imageUrl = toImageUrl(hostel.images?.[0]);
+              const imageUrl = toMediaUrl(hostel.images?.[0]);
 
               return (
                 <div key={hostel._id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">

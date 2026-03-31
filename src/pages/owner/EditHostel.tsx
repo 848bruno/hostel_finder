@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
+import { toMediaUrl } from '../../lib/media';
 import { Save, MapPin, CheckCircle, Loader, ArrowLeft, ImagePlus, X, Trash2 } from 'lucide-react';
 
 async function geocodeAddress(address: string, city: string): Promise<[number, number] | null> {
@@ -385,7 +386,7 @@ export function EditHostel() {
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-4">
                 {existingImages.map((src) => (
                   <div key={src} className="relative group aspect-square">
-                    <img src={src} alt="hostel" className="w-full h-full object-cover rounded-lg border border-gray-200" />
+                    <img src={toMediaUrl(src)} alt="hostel" className="w-full h-full object-cover rounded-lg border border-gray-200" />
                     <button
                       type="button"
                       onClick={() => handleDeleteImage(src)}

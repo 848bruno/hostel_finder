@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { api, ApiError } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { toMediaUrl } from '../../lib/media';
 import { cacheHostel } from '../../store/hostelSlice';
 import type { RootState, AppDispatch } from '../../store';
 import type { BackendHostel } from '../../store/hostelSlice';
@@ -19,30 +20,31 @@ import {
 function PhotoGallery({ images, name }: { images: string[]; name: string }) {
   const [current, setCurrent] = useState(0);
   const [fading, setFading] = useState(false);
+  const normalizedImages = images.map((image) => toMediaUrl(image)).filter(Boolean);
 
-  if (images.length === 0) return null;
+  if (normalizedImages.length === 0) return null;
 
   const goTo = (idx: number) => {
     if (fading || idx === current) return;
     setFading(true);
     setTimeout(() => { setCurrent(idx); setFading(false); }, 180);
   };
-  const prev = () => goTo((current - 1 + images.length) % images.length);
-  const next = () => goTo((current + 1) % images.length);
+  const prev = () => goTo((current - 1 + normalizedImages.length) % normalizedImages.length);
+  const next = () => goTo((current + 1) % normalizedImages.length);
 
   return (
     <div className="select-none">
       <div className="relative overflow-hidden" style={{ height: '420px' }}>
         <img
-          src={images[current]}
+          src={normalizedImages[current]}
           alt={`${name} — ${current + 1}`}
           className={`w-full h-full object-cover transition-opacity duration-200 ${fading ? 'opacity-0' : 'opacity-100'}`}
         />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
         <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full">
-          {current + 1} / {images.length}
+          {current + 1} / {normalizedImages.length}
         </div>
-        {images.length > 1 && (
+        {normalizedImages.length > 1 && (
           <>
             <button onClick={prev} aria-label="Previous"
               className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/75 text-white rounded-full w-11 h-11 flex items-center justify-center transition-all shadow-lg hover:scale-105">
@@ -53,7 +55,7 @@ function PhotoGallery({ images, name }: { images: string[]; name: string }) {
               <ChevronRight size={24} />
             </button>
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-              {images.map((_, i) => (
+              {normalizedImages.map((_, i) => (
                 <button key={i} onClick={() => goTo(i)} aria-label={`Photo ${i + 1}`}
                   className={`rounded-full transition-all duration-200 ${i === current ? 'bg-white w-5 h-2' : 'bg-white/50 hover:bg-white/75 w-2 h-2'}`}
                 />
@@ -62,9 +64,9 @@ function PhotoGallery({ images, name }: { images: string[]; name: string }) {
           </>
         )}
       </div>
-      {images.length > 1 && (
+      {normalizedImages.length > 1 && (
         <div className="flex gap-2 p-3 bg-gray-950 overflow-x-auto">
-          {images.map((src, i) => (
+          {normalizedImages.map((src, i) => (
             <button key={i} onClick={() => goTo(i)}
               className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-150 ${
                 i === current ? 'border-blue-500 scale-105 opacity-100' : 'border-transparent opacity-50 hover:opacity-80'
