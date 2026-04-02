@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import {
   ArrowRightLeft,
   ArrowUpDown,
@@ -66,6 +67,7 @@ const sortLabels: Record<SortOption, string> = {
 };
 
 const DEFAULT_PRIMARY_UNIVERSITY = 'Kirinyaga University';
+const DEFAULT_MAP_CENTER: [number, number] = [-0.0236, 37.9062];
 
 const createDefaultFilters = (): SearchFilters => ({
   hostelType: 'all',
@@ -108,6 +110,50 @@ function getDistanceKm(origin: [number, number], target: [number, number]): numb
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function HostelMapViewport({
+  hostelPositions,
+  userLocation,
+}: {
+  hostelPositions: Array<{ id: string; position: [number, number] }>;
+  userLocation: [number, number] | null;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    const points = hostelPositions.map(({ position }) => position);
+
+    if (userLocation) {
+      points.push(userLocation);
+    }
+
+    if (points.length === 0) {
+      map.setView(DEFAULT_MAP_CENTER, 7, { animate: false });
+      return;
+    }
+
+    if (points.length === 1) {
+      map.setView(points[0], 15, { animate: false });
+      return;
+    }
+
+    map.fitBounds(points, {
+      padding: [48, 48],
+      maxZoom: 15,
+      animate: false,
+    });
+  }, [hostelPositions, map, userLocation]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      map.invalidateSize();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [map]);
+
+  return null;
+}
+
 function HostelMapView({
   hostels,
   userLocation,
@@ -120,66 +166,22 @@ function HostelMapView({
   onSelectHostel: (hostelId: string) => void;
 }) {
   const plottedHostels = useMemo(() => {
-    const entries = hostels
+    return hostels
       .map((hostel) => {
         const coords = getHostelCoordinates(hostel);
         if (!coords) return null;
 
         return {
           hostel,
-          latitude: coords[0],
-          longitude: coords[1],
+          position: coords,
           distanceKm: userLocation ? getDistanceKm(userLocation, coords) : null,
         };
       })
       .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-
-    if (entries.length === 0) {
-      return [];
-    }
-
-    const latitudes = entries.map((entry) => entry.latitude);
-    const longitudes = entries.map((entry) => entry.longitude);
-
-    if (userLocation) {
-      latitudes.push(userLocation[0]);
-      longitudes.push(userLocation[1]);
-    }
-
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
-    const latSpan = maxLat - minLat || 0.02;
-    const lngSpan = maxLng - minLng || 0.02;
-
-    return entries.map((entry) => ({
-      ...entry,
-      x: ((entry.longitude - minLng) / lngSpan) * 100,
-      y: ((maxLat - entry.latitude) / latSpan) * 100,
-    }));
   }, [hostels, userLocation]);
 
   const selectedHostel =
     plottedHostels.find((entry) => entry.hostel._id === selectedHostelId) ?? plottedHostels[0] ?? null;
-
-  const userPoint = useMemo(() => {
-    if (!userLocation || plottedHostels.length === 0) return null;
-
-    const latitudes = plottedHostels.map((entry) => entry.latitude).concat(userLocation[0]);
-    const longitudes = plottedHostels.map((entry) => entry.longitude).concat(userLocation[1]);
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
-    const latSpan = maxLat - minLat || 0.02;
-    const lngSpan = maxLng - minLng || 0.02;
-
-    return {
-      x: ((userLocation[1] - minLng) / lngSpan) * 100,
-      y: ((maxLat - userLocation[0]) / latSpan) * 100,
-    };
-  }, [plottedHostels, userLocation]);
 
   if (plottedHostels.length === 0) {
     return (
@@ -205,53 +207,95 @@ function HostelMapView({
       </div>
 
       <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.9fr)]">
-        <div className="relative h-[420px] overflow-hidden rounded-2xl border border-border bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_42%),linear-gradient(180deg,rgba(15,23,42,0.04),rgba(15,23,42,0))]">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:52px_52px]" />
+        <div className="relative h-[420px] overflow-hidden rounded-2xl border border-border">
+          <MapContainer
+            center={DEFAULT_MAP_CENTER}
+            zoom={7}
+            scrollWheelZoom
+            className="h-full w-full"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
 
-          {userPoint && (
-            <div
-              className="absolute z-20"
-              style={{ left: `${userPoint.x}%`, top: `${userPoint.y}%`, transform: 'translate(-50%, -50%)' }}
-            >
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-emerald-500 shadow-lg">
-                <Navigation size={12} className="text-white" />
-              </div>
-              <span className="mt-2 block rounded-full bg-emerald-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
-                You
-              </span>
-            </div>
-          )}
+            <HostelMapViewport hostelPositions={plottedHostels.map(({ hostel, position }) => ({ id: hostel._id, position }))} userLocation={userLocation} />
 
-          {plottedHostels.map((entry) => {
-            const isSelected = selectedHostel?.hostel._id === entry.hostel._id;
+            {plottedHostels.map((entry) => {
+              const isSelected = selectedHostel?.hostel._id === entry.hostel._id;
 
-            return (
-              <button
-                key={entry.hostel._id}
-                type="button"
-                onClick={() => onSelectHostel(entry.hostel._id)}
-                className="absolute z-10 -translate-x-1/2 -translate-y-1/2 text-left"
-                style={{ left: `${entry.x}%`, top: `${entry.y}%` }}
+              return (
+                <CircleMarker
+                  key={entry.hostel._id}
+                  center={entry.position}
+                  pathOptions={{
+                    color: isSelected ? '#1d4ed8' : '#0f172a',
+                    fillColor: isSelected ? '#2563eb' : '#1e293b',
+                    fillOpacity: 0.92,
+                    weight: isSelected ? 3 : 2,
+                  }}
+                  radius={isSelected ? 11 : 8}
+                  eventHandlers={{
+                    click: () => onSelectHostel(entry.hostel._id),
+                  }}
+                >
+                  <Tooltip direction="top" offset={[0, -8]} opacity={1}>
+                    {entry.hostel.name}
+                  </Tooltip>
+                  <Popup>
+                    <div className="min-w-[220px] max-w-[260px] space-y-2">
+                      {entry.hostel.images?.[0] ? (
+                        <img
+                          src={toMediaUrl(entry.hostel.images[0])}
+                          alt={entry.hostel.name}
+                          className="h-28 w-full rounded-lg object-cover"
+                        />
+                      ) : null}
+                      <div>
+                        <p className="font-semibold text-slate-900">{entry.hostel.name}</p>
+                        <p className="text-xs text-slate-600">
+                          {entry.hostel.location.city ?? 'City not set'}
+                          {entry.hostel.location.nearbyUniversity
+                            ? ` · Near ${entry.hostel.location.nearbyUniversity}`
+                            : ''}
+                        </p>
+                      </div>
+                      <div className="text-sm text-slate-700">
+                        <p>KES {entry.hostel.pricePerMonth.toLocaleString()} / month</p>
+                        <p>{entry.hostel.availableRooms} room(s) available</p>
+                        {entry.distanceKm !== null ? (
+                          <p>{entry.distanceKm.toFixed(1)} km from your location</p>
+                        ) : null}
+                      </div>
+                      <Link
+                        to={`/student/hostel/${entry.hostel._id}`}
+                        className="inline-flex items-center text-sm font-semibold text-blue-700 hover:underline"
+                      >
+                        Open hostel details
+                      </Link>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
+
+            {userLocation ? (
+              <CircleMarker
+                center={userLocation}
+                radius={9}
+                pathOptions={{
+                  color: '#047857',
+                  fillColor: '#10b981',
+                  fillOpacity: 0.95,
+                  weight: 3,
+                }}
               >
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-full border-2 border-white text-white shadow-lg transition-transform ${
-                    isSelected ? 'scale-110 bg-primary' : 'bg-slate-900/80 hover:scale-105'
-                  }`}
-                >
-                  <MapPin size={18} fill="currentColor" />
-                </div>
-                <span
-                  className={`mt-2 block max-w-[150px] truncate rounded-full px-3 py-1 text-xs font-medium ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-background/95 text-foreground shadow-sm'
-                  }`}
-                >
-                  {entry.hostel.name}
-                </span>
-              </button>
-            );
-          })}
+                <Tooltip direction="top" offset={[0, -8]} opacity={1}>
+                  Your location
+                </Tooltip>
+              </CircleMarker>
+            ) : null}
+          </MapContainer>
         </div>
 
         <div className="rounded-2xl border border-border bg-background/60 p-5">
@@ -315,7 +359,7 @@ function HostelMapView({
               <span className="h-2.5 w-2.5 rounded-full bg-primary" />
               Hostel marker
             </span>
-            {userPoint && (
+            {userLocation && (
               <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                 Your location
